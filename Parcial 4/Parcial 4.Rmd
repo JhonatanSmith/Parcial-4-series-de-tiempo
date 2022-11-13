@@ -1,0 +1,372 @@
+---
+title: "Series de tiempo"
+author: "Jhonatan Smith"
+date: "2022-10-09"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+require(dplyr)
+require(tidyverse)
+require(latticeExtra)
+require(datetime)
+library(lubridate)
+library(readxl)
+require(forecast)
+require(readr)
+require(janitor)
+```
+
+
+# Base de datos cerditos
+
+## Marco teorico: ¿Por qué los cerditos?
+
+Tenga presente que el analisis del consumo carnico para una poblacion es importante pueto que a las entidades gubernamentales le permite controlar y entender dicho comportamiento para identificar y preveer posibles problemas de salud publica o en su defecto, generar politicas para controlar la economia 
+del consumo. Se entiende pues, que un analisis para con el consumo es de vital importancia para los analisis demograficos de una poblacion. 
+
+Tambien, tener un control total sobre la cantidad de cerdos sacrificados, ayuda a las entidades sanitarias a mantener un estandar en dicha produccion. Si esto no es regulado, se pueden propagar enfermedadas por la mala praxis en la industria. 
+
+En el presente analisis, se desea predecir el numero total de cabezas porcinas sacrificadas. 
+
+## Procesamiento de la base de datos
+
+El primer paso es la lectura de los datos. Note que los nombres
+de la serie se encuentran inapropiados para trabajar con ellos.
+
+```{r message=FALSE, warning=FALSE}
+
+df = read_delim("cerdos.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+```
+La variable año se convierte en 'ano'. Nos gusta ese nombre entonces, asi se queda.
+Basicamente esta es la estructura de la base de datos. La cual, tiene las siguientes variables.
+
+```{r}
+df = clean_names(df)
+df %>% names()
+```
+Descripcion de las variables en el dataframe:
+
+ *Ano:* Año en el que se toma el registro
+ 
+ *sacrificios_porcinos_machos:* El nombre lo indica, cantidad de sacrificios porcinos machos
+ 
+ *
+ 
+Note que, la variable 'mes' se encuentra en formato caracter y, representa los meses por las tres primeras letras del respectivo mes en español.
+
+```{r}
+df$mes %>% unique() # Se verifica que no estén repetidos valores
+```
+Se procede entonces a crear la variable 'date' que representará la fecha asociada a cada dato.
+
+```{r}
+df$mes =as.factor(df$mes)
+df$mes %>% levels# CUando se convierte en factor, cambia el orden
+month_id = c(4,8,12,1,2,7,6,3,5,11,10,9)
+levels(df$mes) = month_id
+df$mes = df$mes %>% as.character()
+```
+Cuando se aplica la funcion as.factor, el orden de los mismos cambia. Entonces simplemente, se cambiará los niveles de la variable como factor a un valor numerico, siendo 1 enero, 2 febrero y asi sucesivamente. Luego, se transforma en string (Caracter) para obtener finalmente el mes en numero.
+
+Para adquirir correctamente el formato en date, se ha de tener un dia cualquiera agregado. Se escoge el dia 13. 
+
+```{r}
+df$dia = replicate(length(df$ano), '13')
+df$ano = df$ano %>% as.character()
+
+df$date = paste(df$dia,df$mes,df$ano,sep = '-')
+df$date = as.Date(df$date, format = '%d-%m-%Y')
+# Con esto, se tiene la base de datos lista para trabajar
+
+df = df[order(df$date),] # ordenando por fecha mas vieja
+```
+
+## Grafico de la serie
+<<<<<<< Updated upstream
+
+## Total por Macho y Hembra
+
+
+```{r}
+
+xyplot(sacrificios_porcinos_machos+ sacrificio_porcinos_hembras ~ date, df, type = "l", col=c("steelblue", "#69b3a2") , lwd=2)
+```
+
+
+## Total de sacrificios porcinos
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+require(ggplot2)
+require(hrbrthemes)
+
+x = df$date
+y = df$sacrificio_totales
+
+# plot 
+
+ggplot(df, aes(x=date,y=sacrificio_totales))+
+  geom_line(color = '#69b3a2', size = 1.5, alpha = 0.9)+
+  theme_ipsum()+
+  ggtitle('Total de sacrificios porcinos')
+
+```
+
+
+```{r}
+mod1 = auto.arima(df$sacrificio_totales)
+summary(mod1)
+```
+
+```{r}
+acf(df$sacrificio_totales) # cae lento
+```
+
+```{r}
+pacf(df$sacrificio_totales) # ¿No es un buen problema?
+```
+
+Parece que no es un buen problema. TOdo da dentro de las bandas
+ASi que se decide trabajar con otra base de datos mas grande
+
+
+## Mismo problema, otros cerditos.
+
+```{r}
+cerditos_2_la_venganza <- read_excel("cerditos 2 la venganza.xls", 
+    sheet = "Cuadro 3", skip = 9)
+df2 =cerditos_2_la_venganza 
+
+
+df2 = cerditos_2_la_venganza
+df2 = df2 %>% clean_names()
+df2 %>% head(3)
+
+```
+
+```{r}
+plot(df2$fecha, df2$t_cabezas, 'l')
+```
+```{r}
+acf(df2$t_cabezas)
+```
+```{r}
+pacf(df2$t_cabezas)
+```
+
+
+```{r}
+
+a=df2$t_cabezas
+test = auto.arima(na.omit(a))
+test
+```
+
+
+# Base de datos nacimientos hospital 
+
+```{r}
+
+# fn para calcular las raices unitarias y graficas bien chimbita
+arroots <- function(object)
+{
+  if(!("Arima" %in% class(object)) &
+     !("ar" %in% class(object)))
+    stop("object must be of class Arima or ar")
+  if("Arima" %in% class(object))
+    parvec <- object$model$phi
+  else
+    parvec <- object$ar
+  if(length(parvec) > 0)
+  {
+    last.nonzero <- max(which(abs(parvec) > 1e-08))
+    if (last.nonzero > 0)
+      return(structure(list(
+          roots=polyroot(c(1,-parvec[1:last.nonzero])),
+          type="AR"),
+        class='armaroots'))
+  }
+  return(structure(list(roots=numeric(0), type="AR"),
+    class='armaroots'))
+}
+
+# Compute MA roots
+maroots <- function(object)
+{
+  if(!("Arima" %in% class(object)))
+    stop("object must be of class Arima")
+  parvec <- object$model$theta
+  if(length(parvec) > 0)
+  {
+    last.nonzero <- max(which(abs(parvec) > 1e-08))
+    if (last.nonzero > 0)
+      return(structure(list(
+          roots=polyroot(c(1,parvec[1:last.nonzero])),
+          type="MA"),
+        class='armaroots'))
+  }
+  return(structure(list(roots=numeric(0), type="MA"),
+    class='armaroots'))
+}
+
+plot.armaroots <- function(x, xlab="Real", ylab="Imaginary",
+    main=paste("Inverse roots of", x$type,
+          "characteristic polynomial"),
+    ...)
+{
+  oldpar <- par(pty='s')
+  on.exit(par(oldpar))
+  plot(c(-1,1), c(-1,1), xlab=xlab, ylab=ylab,
+       type="n", bty="n", xaxt="n", yaxt="n", main=main, ...)
+  axis(1, at=c(-1,0,1), line=0.5, tck=-0.025)
+  axis(2, at=c(-1,0,1), label=c("-i","0","i"),
+    line=0.5, tck=-0.025)
+  circx <- seq(-1,1,l=501)
+  circy <- sqrt(1-circx^2)
+  lines(c(circx,circx), c(circy,-circy), col='gray')
+  lines(c(-2,2), c(0,0), col='gray')
+  lines(c(0,0), c(-2,2), col='gray')
+  if(length(x$roots) > 0)
+  {
+    inside <- abs(x$roots) > 1
+    points(1/x$roots[inside], pch=19, col='black')
+    if(sum(!inside) > 0)
+      points(1/x$roots[!inside], pch=19, col='red')
+  }
+}
+```
+
+
+Inicialmente se desea trabajar con un indice. Proporcion de niñas nacidas vs niños nacidos ; es decir:
+
+Hembra/ macho; queremos ver si es igual, menor y si esto tiene una evolucion en el tiempo.
+
+```{r warning=FALSE}
+datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
+datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
+datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
+```
+
+
+```{r warning=FALSE}
+datos <- datos %>%
+  mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>% 
+  group_by(Anio, semana) %>% 
+  summarise(ratio = sum(SEXO != "MASCULINO")/sum(SEXO == "MASCULINO"))
+lambda <- forecast::BoxCox.lambda(datos$ratio)
+datos$ratio <- forecast::BoxCox(datos$ratio, lambda)
+
+```
+
+```{r}
+
+pacf(datos$ratio)
+```
+
+Empezamos mal...
+
+```{r}
+acf(datos$ratio)
+```
+
+Y terminamos pior. Valemos verga.
+
+
+```{r}
+x = datos$ratio
+plot(x, type = "l")
+```
+
+Ombe pues bonita si se ve peeero... Y entonces?
+
+```{r}
+mod <- forecast::auto.arima(datos$ratio)
+summary(mod)
+```
+
+Como dijo aquella figura de la tv mexicana; 'Lo sospeché desde un principio'
+
+```{r warning=FALSE}
+library(forecast)
+fit <- mod
+par(mfrow=c(1,2))
+plot(arroots(fit),main="Inverse AR roots")
+plot(maroots(fit),main="Inverse MA roots")
+```
+
+Basicamente vale monda este modelo. No el modelo, el problema
+
+¿Que pasó con las raíces? # Maso, oh tu que todo lo sabes. Iluminad a este pobre mortal, pues la luz de la esperanza se escapa ante cada linea de codigo que escribe.
+
+Hipotesis: La naturaleza del problema no responde a un analisis de series temporales. La proporcion de nacimientos de niños vs niñas no varia en el tiempo; no es un dato temporal. 
+
+Nota para smith del futuro: Basicamente, piense en la teoria antes de perder toda la tarde haciendo estas pendejadas buscando soluciones rebuscadas. KISS
+
+## Niños... Oh, si; niños.
+
+```{r}
+# Probemos con una bd de conteo de niños. 
+datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
+datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
+datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
+# otra veez, porque soy imbecil
+
+datos.total.kids = datos[order(datos$FECHA.NACIMIENTO),]
+
+datos.total.kids = datos.total.kids %>% mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>%group_by(Anio, semana) %>% 
+  summarise(total.kids = sum(SEXO == 'MASCULINO')+sum(SEXO !='MASCULINO')  )
+
+#Miremos que salió
+```
+
+Misma base de datos, ah verdad, no se la hemos mostrado al profesor. La base de datos. PROFE!
+
+```{r}
+datos %>% head() # Hay muchas variables. 
+```
+
+Para este enfoque, interesa contar numero de machos que nacen,o de mujeres y analizar si hay un comportamiento en el timepo de los nacimientos.
+
+Dicho de otra manera, si hay una estacionalidad en una fecha; implica entonces que nueve meses antes se encuentran los mas culiones.
+
+*Podriamos dictaminar, los signos zodiacales mas promiscuos? Donde estan las perras? Les leemos el Tarot con un modelo ARIMA?*
+
+```{r}
+
+plot(datos.total.kids$total.kids, type = 'l') # se ve mas chimbita
+```
+
+```{r}
+b=auto.arima(datos.total.kids$total.kids) # tiene mas sentido
+b
+```
+
+```{r}
+pacf(datos.total.kids$total.kids)
+```
+
+```{r}
+acf(datos.total.kids$total.kids)
+```
+
+Si señor. Este modelo tiene mas sentido. Puesto que la naturaleza del problema TIENE mas sentido. No como la pinche proporcion. Muy bien SMith, a este paso; cuando grande serás como Mazo.
+
+```{r}
+fit <- b
+par(mfrow=c(1,2))
+plot(arroots(fit),main="Inverse AR roots")
+plot(maroots(fit),main="Inverse MA roots")
+```
+
+remember: (And as a consequence, the solution of a homogeneous autoregressive difference equation is stable if all roots of its characteristic polynomials are inside the unit circle, or equivalently, the roots of its inverse characteristic polynomial are outside of the unit circle.)
+
+
+ Mas melo para donde?
+
+
+
+#
