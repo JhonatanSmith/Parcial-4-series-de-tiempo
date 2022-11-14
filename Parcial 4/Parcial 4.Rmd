@@ -406,17 +406,6 @@ load('256modelos.Rdata')
 siguiente paso con los 256 modelos. Se importan 256 modelos previamente ajustados. Se seleccionan los menores AIC y BIC. 
 
 *Modelo optimo segun AIC*
-```{r}
-models[[i[length(i)-1]]]
-```
-
-```{r}
-models[[i[length(i)]]]
-```
-
-```{r}
-as.character(models[[i[length(i)-1]]])
-```
 
 ```{r}
 prueba = Arima(dftimeserie, order = c(0,1,1),
