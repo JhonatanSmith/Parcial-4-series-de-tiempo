@@ -1,6 +1,6 @@
 ---
-title: "Series de tiempo"
-author: "Jhonatan Smith"
+title: "Series de tiempo - Parcial 4"
+author: "Felipe Lopera & Jhonatan Smith"
 date: "2022-10-09"
 output: rmdformats::readthedown
 ---
@@ -11,10 +11,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 require(dplyr)
+require(astsa)
+require(kableExtra)
 require(tidyverse)
+require(ggplot2)
+require(hrbrthemes)
+require(TSstudio)
+require(forecast)
 require(latticeExtra)
 require(datetime)
 library(lubridate)
+require(forecast)
 library(readxl)
 require(forecast)
 require(readr)
@@ -22,7 +29,7 @@ require(janitor)
 ```
 
 
-# Base de datos cerditos
+# Base de datos cerditos (Yopal)
 
 ## Marco teorico: ¿Por qué los cerditos?
 
@@ -35,29 +42,33 @@ En el presente analisis, se desea predecir el numero total de cabezas porcinas s
 
 ## Procesamiento de la base de datos
 
-El primer paso es la lectura de los datos. Note que los nombres
-de la serie se encuentran inapropiados para trabajar con ellos.
+El primer paso es la lectura de los datos. Dado que los nombres
+de la serie se encuentran inapropiados para trabajar con ellos, se corrigen los mismos despues de leer la base de datos.
 
 ```{r message=FALSE, warning=FALSE}
 
 df = read_delim("cerdos.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-```
-La variable año se convierte en 'ano'. Nos gusta ese nombre entonces, asi se queda.
-Basicamente esta es la estructura de la base de datos. La cual, tiene las siguientes variables.
-
-```{r}
 df = clean_names(df)
 df %>% names()
 ```
+
+La variable año se convierte en 'ano'. Nos gusta ese nombre entonces, asi se queda. La base de datos tiene las siguientes variables.
+
 Descripcion de las variables en el dataframe:
 
  *Ano:* Año en el que se toma el registro
  
  *sacrificios_porcinos_machos:* El nombre lo indica, cantidad de sacrificios porcinos machos
  
- *
+ *sacrificio_porcinos_hembras:* Cantidad de sacrificios porcinos de hembras
  
-Note que, la variable 'mes' se encuentra en formato caracter y, representa los meses por las tres primeras letras del respectivo mes en español.
+ *mes:* Mes en el cual se realizó el sacrificio
+ 
+ *Longitus y latitud:*Ubicacion espacial del lugar de sacrificio 
+ 
+ *sacrificio_totales:* Sacrificios totales porcinos
+ 
+Respecto a la variable 'mes' se encuentra en formato caracter y, representa los meses en español.
 
 ```{r}
 df$mes %>% unique() # Se verifica que no estén repetidos valores
@@ -66,7 +77,7 @@ Se procede entonces a crear la variable 'date' que representará la fecha asocia
 
 ```{r}
 df$mes =as.factor(df$mes)
-df$mes %>% levels# CUando se convierte en factor, cambia el orden
+df$mes %>% levels# Se convierte en factor, cambia el orden
 month_id = c(4,8,12,1,2,7,6,3,5,11,10,9)
 levels(df$mes) = month_id
 df$mes = df$mes %>% as.character()
@@ -87,22 +98,26 @@ df = df[order(df$date),] # ordenando por fecha mas vieja
 ```
 
 ## Grafico de la serie
-<<<<<<< Updated upstream
+
+Se procede a graficas las series por Macho, Hembra y Total de sacrificios en orden cronologico.
 
 ## Total por Macho y Hembra
 
-
 ```{r}
 
-xyplot(sacrificios_porcinos_machos+ sacrificio_porcinos_hembras ~ date, df, type = "l", col=c("steelblue", "#69b3a2") , lwd=2)
+# --> construct separate plots for each series
+obj1 <- xyplot(sacrificios_porcinos_machos ~ date, df, type = "l" , lwd=2)
+obj2 <- xyplot(sacrificio_porcinos_hembras ~ date, df, type = "l", lwd=2)
+ 
+# --> Make the plot with second y axis AND legend:
+doubleYScale(obj1, obj2, text = c("sacrificios_porcinos_machos", "sacrificio_porcinos_hembras") , add.ylab2 = TRUE)
 ```
 
+En principio, no parece haber una diferencia significativa de una serie respecto a la otra. Se nota que una de las series está ligeramente por encima de la otra pero; los patrones de ambas son muy similares.
 
 ## Total de sacrificios porcinos
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-require(ggplot2)
-require(hrbrthemes)
 
 x = df$date
 y = df$sacrificio_totales
@@ -116,27 +131,62 @@ ggplot(df, aes(x=date,y=sacrificio_totales))+
 
 ```
 
+La grafica del total de sacrificios porcinos sigue un comportamiento similar a cuando se categoriza por sexo. Ahora, se decide trabajar con la serie del total por simplicidad. 
+
+Ahora, normalmente los cerdos machos poseen un mayor peso dada su contextura, por esto es que; es normal entender que la relacion de cantidad totales sacrificadas sea ligeramente mayor por macho que por hembra. Para los intereses del analisis, se hará con el total de cerdos. 
+
+## Primer modelo con auto.arima
+
+Se utiliza esta primera funcion como un primer acercamiento para entender que se identifica de manera automatica. 
 
 ```{r}
 mod1 = auto.arima(df$sacrificio_totales)
-summary(mod1)
+mod1 %>% summary()
+
 ```
 
+Para este caso puntual, el modelo que sugiere el auto.arima es un ARIMA(0,1,0). ¿Tiene esto sentido?
+
+## Analisis de la ACF y PACF
+
 ```{r}
-acf(df$sacrificio_totales) # cae lento
+acf(df$sacrificio_totales) 
 ```
 
+Note que la ACF muestra un decaimiento lento. Por tal motivo, se han de tomar diferencias (Esto indica, d>=1) en el modelo. Se grafica la acf diferenciada
+
 ```{r}
-pacf(df$sacrificio_totales) # ¿No es un buen problema?
+Diferencias.modelo = na.omit(diff(df$sacrificio_totales))
+acf(Diferencias.modelo)
+```
+Note que al tomar una diferencia, parece haber un corte en el lag 15. Aun asi, se podria pensar que es muy poco significativo; dado que una autocorrelacion de orden 15 implicaria que los datos se relacionan. Igualmente que un lag de 8. No se tiene seguridad en la significancia de los lags asociados a la ACF
+
+```{r}
+pacf(df$sacrificio_totales)
 ```
 
-Parece que no es un buen problema. TOdo da dentro de las bandas
-ASi que se decide trabajar con otra base de datos mas grande
-
-
-## Mismo problema, otros cerditos.
+Note que la PACF muestra que no hay autocorrelacion parcial en los datos asociados a el sacrificio total. ¿Por qué? Se podria suponer que los datos a priori no parecen responder a una variable temporal. Esto es pues, una sospecha infundada ya sea por el tamaño de la muestra o por la naturaleza del proceso.
 
 ```{r}
+dim(df) # La muestra es relativamente pequeña
+```
+Entonces se procede a graficar finalemente los datos diferenciados para mirar el resultado del modelo auto.arima de manera descriptiva
+
+```{r}
+plot(Diferencias.modelo, type = 'l') # Mejorar grafico
+```
+En principio, no tiene sentido aplicar un modelo ARIMA a unos datos que no se encuentran correlacionados y que, su diferencia parece cumplir los supuestos de ruido blanco (Con algunos problemas de varianza).
+
+De esta manera se entiende el por qué el auto.arima otorga como resultado un modelo que tiene basicamente, una media y una desviacion. 
+
+Se opta por trabajar con una base de datos mas grande. 
+ 
+
+# Mismo problema, otros cerditos: Analisis nacional
+
+Se tiene en el dane una base de datos con el registro nacional de sacrificios carnicos, para este caso; porcinos. 
+
+```{r include=FALSE}
 cerditos_2_la_venganza <- read_excel("cerditos 2 la venganza.xls", 
     sheet = "Cuadro 3", skip = 9)
 df2 =cerditos_2_la_venganza 
@@ -144,26 +194,216 @@ df2 =cerditos_2_la_venganza
 
 df2 = cerditos_2_la_venganza
 df2 = df2 %>% clean_names()
+```
+
+
+```{r }
 df2 %>% head(3)
 
 ```
 
+La base de datos 2 (df2) corresponde a los analisis totales de cabezas porcinas sascrificadas. Con esto en mente, se tienen datos desde el 2008 hasta el 2022 con las respectivas variables. La escala de la variable es en cientos de miles. Se baja la escala para hacer mas interpretable las graficas.  
+
+## Grafico sacrificios por Machos y Hembras
+
 ```{r}
-plot(df2$fecha, df2$t_cabezas, 'l')
+df2$t_cabezas = df2$t_cabezas/100000
+df2$machos = df2$machos/100000
+df2$hembras = df2$hembras/100000
+# --> construct separate plots for each series
+obj1 <- xyplot(machos ~ fecha, df2, type = "l" , lwd=2)
+obj2 <- xyplot(hembras ~ fecha, df2, type = "l", lwd=2)
+ 
+# --> Make the plot with second y axis AND legend:
+doubleYScale(obj1, obj2, text = c("sacrificios porcinos machos", "sacrificio porcinos hembras") , add.ylab2 = TRUE)
 ```
+De manera analoga, se observa como el comportamiento en el tiempo de ambas series (Sacrificios de machos y de hembras) es similar. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+x = df2$fecha
+y = df2$t_cabezas
+
+# plot 
+
+ggplot(df2, aes(x=fecha,y=t_cabezas))+
+  geom_line(color = '#69b3a2', size = 1, alpha = 0.9)+
+  theme_ipsum()+
+  ggtitle('Total de sacrificios porcinos')
+
+```
+## Analisis descriptivos para la serie: 
+
+Una vez graficada la serie, se proceden a realizar analisis descriptivos que permitan ver mejor el compportamiento general de la serie.
+
+```{r}
+df2$t_cabezas=df2$t_cabezas
+vectores <- c(df2$t_cabezas)
+dftimeserie <-ts(vectores, frequency = 12)
+descompuesta=decompose(dftimeserie)
+plot(descompuesta)
+
+```
+
+Para la serie, se hace una descomposicion aditiva de los datos. Estos revelan que:
+
+ 1) Hay tendencia creciente en la serie
+ 
+ 2) Hay estacionalidad en los datos (En principio, anual)
+ 
+ 3) Existe un dato atipico (en principio, se sospecha pandemia) en el grafico de seasonal decompose, puesto que se ve un pico en el año '13'(Que representa el año 2008+13, es decir; 2021)
+ 
+ El siguiente grafico permite ver de manera mas clara la estacionalidad. 
+
+```{r}
+
+
+ggseasonplot(dftimeserie,year.labels=TRUE,continuous=TRUE)
+```
+Con una escala de 100.000 cerdos sacrificados por cada unidad representada, se tiene que el mes de marzo destaca por tener un mayor numero de sacrificios en su respectivo año. Para este caso, se puede deducir una estacionalidad anual en dicho mes. Se debe ahondar en el fenomeno para entender por qué en marzo se sacrifican más cerdos. 
+
+```{r}
+ts_seasonal((dftimeserie), type="box")
+
+```
+Al graficar los valores respectivos de la variable asociados a cada mes, se tiene que la media para el mes de marzo es ligeramente mayor. Para apreciar mejor esta diferencia, se elimina la tendencia en los datos y se realiza el grafico.
+
+```{r}
+ts_seasonal(diff(dftimeserie), type="box")
+
+```
+Ahora, es más claro que el mes de marzo presenta un comportamiento por encima de la media. Esto implica que en dicho mes, se sacrifican mas cerdos. De manera analoga, abril se encuentra por debajo de la media general del proceso. Estos dos meses han de ser tenidos en cuenta.
+
+```{r}
+ts_heatmap(diff(dftimeserie), color = "Reds")
+```
+
+En el mapa, se tiene de izquiera a derecha, el mismo mes en diferentes años. Ahora, note que en marzo, siempre se nota un mayor numero de sacrificios. 
+
+Verticalmente se tiene un año representado. Por año, unevamente Marzo siemore destaca por ser el mes con mayor numero de sacrificios. 
+
+```{r}
+
+ggseasonplot(dftimeserie, polar = TRUE)
+```
+
+Se tiene a  la derecha el conteo de años a partir del 2008, asi; 1 es 2008 y year 14 es el año 2022 (2008 + 14). Ahora, Cada año se encuentra graficado y espera ver estacionalidad en los datos. nuevamente, Marzo, junio destacan como dos meses con 'picos' y abrazos. 
+
+
+## Modelamiento de la serie 
+
+Para modelar apropiadamente la serie, se propone primero realziar un analisis descriptivo de la ACF y la PACF. Asi, pues: 
+
+*ACF:*
+
 ```{r}
 acf(df2$t_cabezas)
 ```
+
+Note que debido a un decaimiento lento en la ACF, se ha de tomar en el modelo d>=1. Se procede entonces a tomar dicha diferencia y a graficar nuevamente la ACF.
+
 ```{r}
-pacf(df2$t_cabezas)
+acf(df2$t_cabezas %>% diff %>% na.omit, lag.max = 50)
+```
+
+Al tomar diferencias para eliminar la tendencia, se nota que hay ruptura fuerte en los lags 1 y 12. Ahora, tenga presente que hay rupturas en otros lags, como 4 el. Esto en conjunto con la PACF permitirá entender cual seria el posible modelo a utilizar. Puesto que podrias ser muy subjetivo, podria entenderse como un corte en 4,8,11,12 (Destaca mucho mas),13. Ahora, tambien podria interpretarse como un comportamiento senoidal con ruptura en 12. Dado este escenario, se procede a graficar la PACF.
+
+Ahora, la estacionalidad se ve marcada en 12. 
+
+```{r}
+pacf(df2$t_cabezas, lag.max = 35)
 ```
 
 
+Al analizar la PACF, se percibe corte en los primeros lag (menos el 4) y en 8,11 y 12. Nuevamente, hay quien podria argumentar un comportamiento senoidal, por tanto se proponen modelos SARIMA(p,d,q)x(P,D,Q) para modelar la serie. Esto se realzia con la intencion de entender 
+
+En definitiva, al analizar la ACF y la PACF, el modelo resultante ha de ser un SARIMA, donde la frecuencia asociada al mismo ha de ser 12.
+
+## Modelando la serie: SARIMA vs auto.arima
+
+Se procede a realizar un ajuste de un modelo para la serie con la funcion de auto.arima; se desea comparar los resultados de dicha funcion con los analisis descriptivos hasta la fecha. 
+
+```{r}
+mod1 = auto.arima(df2$t_cabezas, stepwise = F, approximation = F, seasonal = T,)
+```
+
+```{r}
+summary(mod1)
+```
+
+Note que, la funcion auto.arima ajusta un modelo ARIMA(2,1,3)
+Ahora, se sabia con los analisis anteriores que la diferencia a tomar era 1 (d=1) y los valores de p y q podrian variar entre los mencionados. 
+Ahora, tambien se sabia que la serie presentaba un comportamiento estacional. Sin embargo la funcion auto.arima NO muestra dicho comportamiento estacional en el modelamiento. 
+Surge una pregunta, ¿Es este el mejor modelo, sin importar un analisis de estacionalidad? o, por otra parte, ¿ la funcion carece de ajuste sufiente para detectar un buen modelo?.
+
+Para esto, se seleccionan diferentes modelos propuestos con la intencion de comparar sus valores y verificar cual tendria un mejor rendimiento.
+
+NOTA: Se utiliza toda la base de datos por ahora, dado que se sospecha se realizarán intervenciones. 
+
+```{r}
+#mod2 = sarima(df2$t_cabezas,)
+
+# SEGUN ACF (p,q,d)
+
+# Corte en 1
+# Corte en 4
+
+# SEGUN ACF (P,Q,D)
+# Corte en 12
+# Decaimiento ESTACIONAL
+
+# SEGUN PACF 
+# Corte 1, o en 2
+# Corte en 12 NO DECAIMIENTO EXPONENCIAL 
+
+# SIN COMPONENTE ESTACIONAL
+# ARIMA(0,1,1)
+# ARIMA (0,1,2)
+# ARIMA (1,1,1)
+# ARIMA (1,1,2), (2,1,1),(2,1,2),(3,1,1),(3,1,2),(1,1,3)
+# ARIMA (3,1,3)
+
+# CON COMPONENTE ESTACIONAL
+
+```
+
+```{r}
+x = df2$t_cabezas
+mod2 = arima(x, order = c(0,1,1))
+mod3 = arima(x, order = c(1,1,1))
+mod4 = arima(x, order = c(1,1,2))
+mod5 = arima(x, order = c(2,1,1))
+mod6 = arima(x, order = c(2,1,2))
+mod7 = arima(x, order = c(3,1,1))
+mod8 = arima(x, order = c(3,1,2))
+mod9 = arima(x, order = c(1,1,3))
+mod10 = arima(x, order = c(3,1,3))
+```
+
 ```{r}
 
-a=df2$t_cabezas
-test = auto.arima(na.omit(a))
-test
+# AIC mod 1: 97.68
+#mod2 %>%BIC
+cbind(AIC(mod1,mod2,mod3,mod4,mod5,mod6,
+mod7,mod8,mod9,mod10),BIC(mod1,mod2,mod3,mod4,mod5,mod6,
+mod7,mod8,mod9,mod10)[2])
+
+```
+
+
+Como era de esperarse, auto.arima muestra un mejor rendimiento a la hora de escoger modelo. 
+
+```{r}
+HW1 <- HoltWinters(dftimeserie)
+```
+
+```{r}
+MSE_HW = HW1$SSE/length(dftimeserie)
+MSE_HW
+```
+
+```{r}
+
 ```
 
 
