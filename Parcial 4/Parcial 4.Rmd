@@ -281,7 +281,7 @@ ts_heatmap(diff(dftimeserie), color = "Reds")
 
 En el mapa, se tiene de izquiera a derecha, el mismo mes en diferentes años. Ahora, note que en marzo, siempre se nota un mayor numero de sacrificios. 
 
-Verticalmente se tiene un año representado. Por año, unevamente Marzo siemore destaca por ser el mes con mayor numero de sacrificios. 
+Verticalmente se tiene un año representado. Por año, nuevamente Marzo siempre destaca por ser el mes con mayor numero de sacrificios. 
 
 ```{r}
 
@@ -314,6 +314,18 @@ Ahora, la estacionalidad se ve marcada en 12.
 ```{r}
 pacf(df2$t_cabezas, lag.max = 35)
 ```
+## Partimos los datos
+
+```{r}
+
+train <- window(dftimeserie, start=time(dftimeserie)[1],
+
+end = time(dftimeserie)[length(dftimeserie) - 12])
+test <- window(dftimeserie, start = time(dftimeserie)[length(dftimeserie)
+- 12 + 1],
+end = time(dftimeserie)[length(dftimeserie)])
+
+```
 
 
 Al analizar la PACF, se percibe corte en los primeros lag (menos el 4) y en 8,11 y 12. Nuevamente, hay quien podria argumentar un comportamiento senoidal, por tanto se proponen modelos SARIMA(p,d,q)x(P,D,Q) para modelar la serie. Esto se realzia con la intencion de entender 
@@ -327,6 +339,25 @@ Se procede a realizar un ajuste de un modelo para la serie con la funcion de aut
 ```{r}
 mod1 = auto.arima(df2$t_cabezas, stepwise = F, approximation = F, seasonal = T,)
 ```
+
+```{r}
+checkresiduals(mod1)
+```
+
+```{r}
+shapiro.test(mod1$residuals)
+```
+```{r}
+require(tseries)
+jarque.bera.test(mod1$residuals)
+```
+
+```{r}
+qqnorm(mod1$residuals)
+qqline(mod1$residuals)
+```
+
+
 
 ```{r}
 summary(mod1)
@@ -413,6 +444,25 @@ prueba = Arima(dftimeserie, order = c(0,1,1),
 ```
 
 ```{r}
+checkresiduals(prueba)
+```
+
+```{r}
+shapiro.test(prueba$residuals)
+```
+
+```{r}
+jarque.bera.test(prueba$residuals)
+```
+
+```{r}
+qqnorm(prueba$residuals)
+qqline(prueba$residuals)
+```
+
+
+
+```{r}
 summary(prueba)
 ```
 
@@ -427,6 +477,23 @@ f_fit <- forecast(prueba)
 
 ```{r}
 p2 = auto.arima(df2$t_cabezas,stepwise = F,approximation = F,seasonal = 12)
+```
+
+```{r}
+checkresiduals(p2)
+```
+
+```{r}
+shapiro.test(p2$residuals)
+```
+
+```{r}
+jarque.bera.test(p2$residuals)
+```
+
+```{r}
+qqnorm(p2$residuals)
+qqline(p2$residuals)
 ```
 
 ```{r}
@@ -451,7 +518,7 @@ Note que la prediccion del modelo de auto.arima es mas pobre. Esto dado que; hac
 
 
 ```{r}
-HW1 <- HoltWinters(dftimeserie)
+HW1 <- hw(dftimeserie)
 ```
 
 ```{r}
@@ -463,10 +530,86 @@ autoplot(dftimeserie, series="Datos") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 
 ```
+```{r}
+checkresiduals(HW1)
+```
+
+```{r}
+shapiro.test(HW1$residuals)
+```
+
+```{r}
+jarque.bera.test(HW1$residuals)
+```
+
+```{r}
+qqnorm(HW1$residuals)
+qqline(HW1$residuals)
+```
+
+```{r}
+# Custom HoltWinters fitting
+HW2 <- hw(dftimeserie, alpha=0.2, beta=0.1, gamma=0.1)
+```
+
+```{r}
+HW2.pred <- forecast(HW2)
+#Visually evaluate the prediction
+autoplot(dftimeserie, series="Datos") + 
+   autolayer(HW2$fitted, series="Modelo auto.arima ") +
+   autolayer(HW2.pred, series="Prediction") +
+   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
+```
+
+```{r}
+# Custom HoltWinters fitting
+HW2ensayo <- hw(dftimeserie,  optim.start = c(alpha = 0.33, beta = 0.33, gamma = 0.33))
+```
+
+```{r}
+HW2ensayo.pred <- forecast(HW2)
+#Visually evaluate the prediction
+autoplot(dftimeserie, series="Datos") + 
+   autolayer(HW2ensayo$fitted, series="Modelo auto.arima ") +
+   autolayer(HW2ensayo.pred, series="Prediction") +
+   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
+```
+## tabla de acurracy de modelos propuestos
+
+```{r}
+model_comp <- data.frame(accuracy(mod1)[1:7],
+                         accuracy(prueba)[1:7],
+                        accuracy(p2)[1:7],
+                        accuracy(HW1)[1:7],
+                        accuracy(HW2)[1:7],
+                        accuracy(HW2ensayo)[1:7],
+                         row.names = c("ME", "RMSE",
+                                       "MAE", "MPE",
+                                       "MAPE", "MASE",
+                                       "ACF1"))
+colnames(model_comp) <- c('mod1','prueba','p2','HW1','HW2','HW2ensayo')
+
+model_comp
+```
+
+
+
+
 
 ## Analisis de outliers
 
 Observe de nuevo la serie original.
+
+```{r}
+plot(dftimeserie)
+```
+```{r}
+require(tsoutliers)
+mod_outliers <- tso(dftimeserie, delta=0.3)
+mod_outliers
+```
+
+
 
 
 
