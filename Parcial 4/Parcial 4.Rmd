@@ -168,22 +168,21 @@ Nota para smith del futuro: Basicamente, piense en la teoria antes de perder tod
 
 ![Un lindo cerdito](C:/Users\jhsga\OneDrive\Escritorio\ODINSA\Parcial-4-series-de-tiempo\Parcial 4\tierno.jpg)
 
-Tenga presente que el analisis del consumo carnico para una poblacion es importante pueto que a las entidades gubernamentales le permite controlar y entender dicho comportamiento para identificar y preveer posibles problemas de salud publica o en su defecto, generar politicas para controlar la economia 
-del consumo. Se entiende pues, que un analisis para con el consumo es de vital importancia para los analisis demograficos de una poblacion. 
+Tenga presente que el análisis del consumo cárnico para una población es importante puesto que a las entidades gubernamentales le permite controlar y entender dicho comportamiento para identificar y prever posibles problemas de salud pública o en su defecto, generar políticas para controlar la economía del consumo. Se entiende pues, que un análisis para con el consumo es de vital importancia para los análisis demográficos de una población. 
 
-Tambien, tener un control total sobre la cantidad de cerdos sacrificados, ayuda a las entidades sanitarias a mantener un estandar en dicha produccion. Si esto no es regulado, se pueden propagar enfermedadas por la mala praxis en la industria. 
+También, tener un control total sobre la cantidad de cerdos sacrificados, ayuda a las entidades sanitarias a mantener un estándar en dicha producción. Si esto no es regulado, se pueden propagar enfermedades por la mala praxis en la industria.
 
-En el presente analisis, se desea predecir el numero total de cabezas porcinas sacrificadas. 
+En el presente análisis, se desea predecir el número total de cabezas porcinas sacrificadas.
+
 
 # PERO AUN MAS IMPORTANTE:
 
 ![Una chuleta](C:/Users\jhsga\OneDrive\Escritorio\ODINSA\Parcial-4-series-de-tiempo\Parcial 4\chuleta.jpg)
-El factor economico. Y sabrozo del asunto. 
+El factor económico y sabroso del asunto.. 
 
 ## Procesamiento de la base de datos
 
-El primer paso es la lectura de los datos. Dado que los nombres
-de la serie se encuentran inapropiados para trabajar con ellos, se corrigen los mismos despues de leer la base de datos.
+El primer paso es la lectura de los datos. Dado que los nombres de la serie se encuentran inapropiados para trabajar con ellos, se corrigen los mismos después de leer la base de datos.
 
 ```{r message=FALSE, warning=FALSE}
 
@@ -192,9 +191,10 @@ df = clean_names(df)
 df %>% names()
 ```
 
-La variable año se convierte en 'ano'. Nos gusta ese nombre entonces, asi se queda. La base de datos tiene las siguientes variables.
+El primer paso es la lectura de los datos. Dado que los nombres de la serie se encuentran inapropiados para trabajar con ellos, se corrigen los mismos después de leer la base de datos.
+La variable año se convierte en 'ano'. Nos gusta ese nombre entonces, así se queda. La base de datos tiene las siguientes variables.
 
-Descripcion de las variables en el dataframe:
+Descripción de las variables en el dataframe:
 
  *Ano:* Año en el que se toma el registro
  
@@ -208,7 +208,8 @@ Descripcion de las variables en el dataframe:
  
  *sacrificio_totales:* Sacrificios totales porcinos
  
-Respecto a la variable 'mes' se encuentra en formato caracter y, representa los meses en español.
+Respecto a la variable 'mes' se encuentra en formato carácter y, representa los meses en español.
+
 
 ```{r}
 df$mes %>% unique() # Se verifica que no estén repetidos valores
@@ -222,9 +223,9 @@ month_id = c(4,8,12,1,2,7,6,3,5,11,10,9)
 levels(df$mes) = month_id
 df$mes = df$mes %>% as.character()
 ```
-Cuando se aplica la funcion as.factor, el orden de los mismos cambia. Entonces simplemente, se cambiará los niveles de la variable como factor a un valor numerico, siendo 1 enero, 2 febrero y asi sucesivamente. Luego, se transforma en string (Caracter) para obtener finalmente el mes en numero.
+Cuando se aplica la función as.factor, el orden de los mismos cambia. Entonces simplemente, se cambiará los niveles de la variable como factor a un valor numérico, siendo 1 enero, 2 febrero y así sucesivamente. Luego, se transforma en string (Caracter) para obtener finalmente el mes en número.
 
-Para adquirir correctamente el formato en date, se ha de tener un dia cualquiera agregado. Se escoge el dia 13. 
+Para adquirir correctamente el formato en date, se ha de tener un día cualquiera agregado. Se escoge el día 13.
 
 ```{r}
 df$dia = replicate(length(df$ano), '13')
@@ -239,7 +240,7 @@ df = df[order(df$date),] # ordenando por fecha mas vieja
 
 ## Grafico de la serie
 
-Se procede a graficas las series por Macho, Hembra y Total de sacrificios en orden cronologico.
+Se procede a graficas las series por Macho, Hembra y Total de sacrificios en orden cronológico.
 
 ## Total por Macho y Hembra
 
@@ -253,9 +254,10 @@ obj2 <- xyplot(sacrificio_porcinos_hembras ~ date, df, type = "l", lwd=2)
 doubleYScale(obj1, obj2, text = c("sacrificios_porcinos_machos", "sacrificio_porcinos_hembras") , add.ylab2 = TRUE)
 ```
 
-En principio, no parece haber una diferencia significativa de una serie respecto a la otra. Se nota que una de las series está ligeramente por encima de la otra pero; los patrones de ambas son muy similares.
+En principio, no parece haber una diferencia significativa de una serie respecto a la otra. Se nota que una de las series está ligeramente por encima de la otra, pero; los patrones de ambas son muy similares.
 
 ## Total de sacrificios porcinos
+
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -273,11 +275,12 @@ ggplot(df, aes(x=date,y=sacrificio_totales))+
 
 La grafica del total de sacrificios porcinos sigue un comportamiento similar a cuando se categoriza por sexo. Ahora, se decide trabajar con la serie del total por simplicidad. 
 
-Ahora, normalmente los cerdos machos poseen un mayor peso dada su contextura, por esto es que; es normal entender que la relacion de cantidad totales sacrificadas sea ligeramente mayor por macho que por hembra. Para los intereses del analisis, se hará con el total de cerdos. 
+Ahora, normalmente los cerdos macho poseen un mayor peso dada su contextura, por esto es que; es normal entender que la relación de cantidad totales sacrificadas sea ligeramente mayor por macho que por hembra. Para los intereses del análisis, se hará con el total de cerdos. 
 
 ## Primer modelo con auto.arima
 
-Se utiliza esta primera funcion como un primer acercamiento para entender que se identifica de manera automatica. 
+Se utiliza esta primera función como un primer acercamiento para entender que se identifica de manera automática.
+
 
 ```{r}
 mod1 = auto.arima(df$sacrificio_totales)
@@ -287,44 +290,45 @@ mod1 %>% summary()
 
 Para este caso puntual, el modelo que sugiere el auto.arima es un ARIMA(0,1,0). ¿Tiene esto sentido?
 
-## Analisis de la ACF y PACF
+## Análisis de la ACF y PACF
+
 
 ```{r}
 acf(df$sacrificio_totales) 
 ```
 
-Note que la ACF muestra un decaimiento lento. Por tal motivo, se han de tomar diferencias (Esto indica, d>=1) en el modelo. Se grafica la acf diferenciada
+Note que la ACF muestra un decaimiento lento. Por tal motivo, se han de tomar diferencias (Esto indica, d>=1) en el modelo. Se grafica la acf diferenciada.
 
 ```{r}
 Diferencias.modelo = na.omit(diff(df$sacrificio_totales))
 acf(Diferencias.modelo)
 ```
-Note que al tomar una diferencia, parece haber un corte en el lag 15. Aun asi, se podria pensar que es muy poco significativo; dado que una autocorrelacion de orden 15 implicaria que los datos se relacionan. Igualmente que un lag de 8. No se tiene seguridad en la significancia de los lags asociados a la ACF
+Note que, al tomar una diferencia, parece haber un corte en el lag 15. Aun así, se podría pensar que es muy poco significativo; dado que una autocorrelación de orden 15 implicaría que los datos se relacionan. Igualmente, que un lag de 8. No se tiene seguridad en la significancia de los lags asociados a la ACF
 
 ```{r}
 pacf(df$sacrificio_totales)
 ```
 
-Note que la PACF muestra que no hay autocorrelacion parcial en los datos asociados a el sacrificio total. ¿Por qué? Se podria suponer que los datos a priori no parecen responder a una variable temporal. Esto es pues, una sospecha infundada ya sea por el tamaño de la muestra o por la naturaleza del proceso.
-
+Note que la PACF muestra que no hay autocorrelación parcial en los datos asociados a el sacrificio total. ¿Por qué? Se podría suponer que los datos a priori no parecen responder a una variable temporal. Esto es pues, una sospecha infundada ya sea por el tamaño de la muestra o por la naturaleza del proceso.
 ```{r}
 dim(df) # La muestra es relativamente pequeña
 ```
-Entonces se procede a graficar finalemente los datos diferenciados para mirar el resultado del modelo auto.arima de manera descriptiva
+Entonces se procede a graficar finalmente los datos diferenciados para mirar el resultado del modelo auto.arima de manera descriptiva
 
 ```{r}
 plot(Diferencias.modelo, type = 'l') # Mejorar grafico
 ```
 En principio, no tiene sentido aplicar un modelo ARIMA a unos datos que no se encuentran correlacionados y que, su diferencia parece cumplir los supuestos de ruido blanco (Con algunos problemas de varianza).
 
-De esta manera se entiende el por qué el auto.arima otorga como resultado un modelo que tiene basicamente, una media y una desviacion. 
+De esta manera se entiende el por qué el auto.arima otorga como resultado un modelo que tiene básicamente, una media y una desviación. 
 
-Se opta por trabajar con una base de datos mas grande. 
+Se opta por trabajar con una base de datos más grande. 
  
 
-# Mismo problema, otros cerditos: Analisis nacional
+# Mismo problema, otros cerditos: Análisis nacional
 
-Se tiene en el dane una base de datos con el registro nacional de sacrificios carnicos, para este caso; porcinos. 
+Se tiene en el DANE una base de datos con el registro nacional de sacrificios cárnicos, para este caso; porcinos.
+
 
 ```{r include=FALSE}
 cerditos_2_la_venganza <- read_excel("cerditos 2 la venganza.xls", 
@@ -342,9 +346,10 @@ df2 %>% head(3)
 
 ```
 
-La base de datos 2 (df2) corresponde a los analisis totales de cabezas porcinas sascrificadas. Con esto en mente, se tienen datos desde el 2008 hasta el 2022 con las respectivas variables. La escala de la variable es en cientos de miles. Se baja la escala para hacer mas interpretable las graficas.  
+La base de datos 2 (df2) corresponde a los análisis totales de cabezas porcinas sacrificadas. Con esto en mente, se tienen datos desde el 2008 hasta el 2022 con las respectivas variables. La escala de la variable es en cientos de miles. Se baja la escala para hacer más interpretable las gráficas.  
 
 ## Grafico sacrificios por Machos y Hembras
+
 
 ```{r}
 df2$t_cabezas = df2$t_cabezas/100000
@@ -357,7 +362,7 @@ obj2 <- xyplot(hembras ~ fecha, df2, type = "l", lwd=2)
 # --> Make the plot with second y axis AND legend:
 doubleYScale(obj1, obj2, text = c("sacrificios porcinos machos", "sacrificio porcinos hembras") , add.ylab2 = TRUE)
 ```
-De manera analoga, se observa como el comportamiento en el tiempo de ambas series (Sacrificios de machos y de hembras) es similar. 
+De manera análoga, se observa como el comportamiento en el tiempo de ambas series (Sacrificios de machos y de hembras) es similar.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -372,9 +377,10 @@ ggplot(df2, aes(x=fecha,y=t_cabezas))+
   ggtitle('Total de sacrificios porcinos')
 
 ```
-## Analisis descriptivos para la serie: 
+## Análisis descriptivos para la serie: 
 
-Una vez graficada la serie, se proceden a realizar analisis descriptivos que permitan ver mejor el compportamiento general de la serie.
+Una vez graficada la serie, se proceden a realizar análisis descriptivos que permitan ver mejor el comportamiento general de la serie.
+
 
 ```{r}
 df2$t_cabezas=df2$t_cabezas
@@ -385,20 +391,21 @@ plot(descompuesta)
 
 ```
 
-Para la serie, se hace una descomposicion aditiva de los datos. Estos revelan que:
+Para la serie, se hace una descomposición aditiva de los datos. Estos revelan que:
 
  1) Hay tendencia creciente en la serie
  
  2) Hay estacionalidad en los datos (En principio, anual)
  
- 3) Existe un dato atipico (en principio, se sospecha pandemia) en el grafico de seasonal decompose, puesto que se ve un pico en el año '13'(Que representa el año 2008+13, es decir; 2021)
+ 3) Existe un dato atípico (en principio, se sospecha pandemia) en el gráfico de seasonal decompose, puesto que se ve un pico en el año '13'(Que representa el año 2008+13, es decir; 2021)
  
- El siguiente grafico permite ver de manera mas clara la estacionalidad. 
+ El siguiente grafico permite ver de manera más clara la estacionalidad.
+
 
 ```{r}
 ggseasonplot(dftimeserie,year.labels=TRUE,continuous=TRUE)
 ```
-Con una escala de 100.000 cerdos sacrificados por cada unidad representada, se tiene que el mes de diciembre destaca por tener un mayor numero de sacrificios en su respectivo año. Para este caso, se puede deducir una estacionalidad anual en dicho mes. Se debe ahondar en el fenomeno para entender por qué en diciembre se sacrifican más cerdos. Ahora, el sentido comun apunta a que, en visperas de epoca navideña el consumo de carnes aumenta.
+Con una escala de 100.000 cerdos sacrificados por cada unidad representada, se tiene que el mes de diciembre destaca por tener un mayor número de sacrificios en su respectivo año. Para este caso, se puede deducir una estacionalidad anual en dicho mes. Se debe ahondar en el fenómeno para entender por qué en diciembre se sacrifican más cerdos. Ahora, el sentido común apunta a que, en vísperas de época navideña el consumo de carnes aumenta.
 
 ```{r}
 ts_seasonal((dftimeserie), type="box")
@@ -410,55 +417,58 @@ Al graficar los valores respectivos de la variable asociados a cada mes, se tien
 ts_seasonal(diff(dftimeserie), type="box")
 
 ```
-Ahora, es más claro que el mes de diciembre presenta un comportamiento por encima de la media. Esto implica que en dicho mes, se sacrifican mas cerdos. De manera analoga, enero se encuentra por debajo de la media general del proceso. Estos dos meses han de ser tenidos en cuenta.
+Ahora, es más claro que el mes de diciembre presenta un comportamiento por encima de la media. Esto implica que, en dicho mes, se sacrifican más cerdos. De manera análoga, enero se encuentra por debajo de la media general del proceso. Estos dos meses han de ser tenidos en cuenta.
 
 ```{r}
 ts_heatmap(diff(dftimeserie), color = "Reds")
 ```
 
-En el mapa, se tiene de izquiera a derecha, el mismo mes en diferentes años. Ahora, note que en diciembre, siempre se nota un mayor numero de sacrificios. 
+En el mapa, se tiene de izquierda a derecha, el mismo mes en diferentes años. Ahora, note que, en diciembre, siempre se nota un mayor número de sacrificios. 
 
-Verticalmente se tiene un año representado. Por año, nuevamente diciembre siempre destaca por ser el mes con mayor numero de sacrificios. 
+Verticalmente se tiene un año representado. Por año, nuevamente diciembre siempre destaca por ser el mes con mayor número de sacrificios.
+
 
 ```{r}
 
 ggseasonplot(dftimeserie, polar = TRUE)
 ```
 
-Se tiene a  la derecha el conteo de años a partir del 2008,ahora; Cada año se encuentra graficado y espera ver estacionalidad en los datos. nuevamente, diciembre,destaca como mes con 'picos' 
+Se tiene a la derecha el conteo de años a partir del 2008, ahora; Cada año se encuentra graficado y espera ver estacionalidad en los datos. nuevamente, diciembre, destaca como mes con 'picos' 
 
 
 ## Modelamiento de la serie 
 
-Para modelar apropiadamente la serie, se propone primero realziar un analisis descriptivo de la ACF y la PACF. Asi, pues: 
+Para modelar apropiadamente la serie, se propone primero realizar un análisis descriptivo de la ACF y la PACF. Así, pues: 
 
 *ACF:*
+
 
 ```{r}
 acf(df2$t_cabezas)
 ```
 
-Note que debido a un decaimiento lento en la ACF, se ha de tomar en el modelo d>=1. Se procede entonces a tomar dicha diferencia y a graficar nuevamente la ACF.
+Note que, debido a un decaimiento lento en la ACF, se ha de tomar en el modelo d>=1. Se procede entonces a tomar dicha diferencia y a graficar nuevamente la ACF.
+
 
 ```{r}
 acf(df2$t_cabezas %>% diff %>% na.omit, lag.max = 50)
 ```
 
-Al tomar diferencias para eliminar la tendencia, se nota que hay ruptura fuerte en los lags 1 y 12. Ahora, tenga presente que hay rupturas en otros lags, como 4 el. Esto en conjunto con la PACF permitirá entender cual seria el posible modelo a utilizar. Puesto que podrias ser muy subjetivo, podria entenderse como un corte en 4,8,11,12 (Destaca mucho mas),13. Ahora, tambien podria interpretarse como un comportamiento senoidal con ruptura en 12. Dado este escenario, se procede a graficar la PACF.
+Al tomar diferencias para eliminar la tendencia, se nota que hay ruptura fuerte en los lags 1 y 12. Ahora, tenga presente que hay rupturas en otros lags, como 4 el. Esto en conjunto con la PACF permitirá entender cuál sería el posible modelo para utilizar. Puesto que podría ser muy subjetivo, podría entenderse como un corte en 4,8,11,12 (Destaca mucho más),13. Ahora, también podría interpretarse como un comportamiento senoidal con ruptura en 12. Dado este escenario, se procede a graficar la PACF.
 
-Ahora, la estacionalidad se ve marcada en 12. 
+Ahora, la estacionalidad se ve marcada en 12.
+ 
 
 ```{r}
 pacf(df2$t_cabezas, lag.max = 35)
 ```
-Al analizar la PACF, se percibe corte en los primeros lag (menos el 4) y en 8,11 y 12. Nuevamente, hay quien podria argumentar un comportamiento senoidal, por tanto se proponen modelos SARIMA(p,d,q)x(P,D,Q) para modelar la serie. Esto se realzia con la intencion de entender 
-
-En definitiva, al analizar la ACF y la PACF, el modelo resultante ha de ser un SARIMA, donde la frecuencia asociada al mismo ha de ser 12.
+Al analizar la PACF, se percibe corte en los primeros lag (menos el 4) y en 8,11 y 12. Nuevamente, hay quien podría argumentar un comportamiento senoidal, por tanto se proponen modelos SARIMA(p,d,q)x(P,D,Q) para modelar la serie. Esto se realiza con la intención de entender en definitiva, al analizar la ACF y la PACF, el modelo resultante ha de ser un SARIMA, donde la frecuencia asociada al mismo ha de ser 12.
 
 
 ## Modelando la serie: SARIMA vs auto.arima
 
-Se procede a realizar un ajuste de un modelo para la serie con la funcion de auto.arima; se desea comparar los resultados de dicha funcion con los analisis descriptivos hasta el momento.
+Se procede a realizar un ajuste de un modelo para la serie con la función de auto.arima; se desea comparar los resultados de dicha función con los análisis descriptivos hasta el momento.
+
 
 ```{r}
 mod1 = auto.arima(df2$t_cabezas, stepwise = F, approximation = F, seasonal = T,)
@@ -472,8 +482,7 @@ plot(maroots(mod1),main="Inverse MA roots")
 ```
 
 
-La ACF de los residuales muestra correlacion en lag 12. Parece haber normalidad y a priori no se idenfitican datos atipicos. Ahora, tambien se aclara que la respectiva prueba de Ljung-Box rechaza no autocorrelacion. 
-
+La ACF de los residuales muestra correlación en lag 12. Parece haber normalidad y a priori no se identifican datos atípicos. Ahora, también se aclara que la respectiva prueba de Ljung-Box rechaza no autocorrelación.
 ```{r}
 shapiro.test(mod1$residuals)
 ```
@@ -491,16 +500,17 @@ qqnorm(mod1$residuals)
 qqline(mod1$residuals)
 ```
 
-El grafico qq-plot parece no tener desviaciones fuertes, a exepcion del final del grafico. 
+El grafico QQ-plot parece no tener desviaciones fuertes, a excepción del final del gráfico.
 
 ```{r}
 summary(mod1)
 ```
-Finalemente, auto.arima ajusta un modelo ARIMA (2,1,3); lo cual es contra intruitivo con el analisis estacional ya realizado. 
+Finalmente, auto.arima ajusta un modelo ARIMA (2,1,3); lo cual es contra intuitivo con el análisis estacional ya realizado. 
 
-## Prediccion auto.arima
+## Predicción auto.arima
 
-Se proponen realizar predicciones con los modelos teniendo en cuenta toda la base de datos, sin hacer Back-testing. Esto en aras de tener una mejor idea de que están haciendo los modelos y, si es o no un buen ajuste a los datos. Para profundizar esto, más adelante se utilizaran tecnicas de backtesting.
+Se proponen realizar predicciones con los modelos teniendo en cuenta toda la base de datos, sin hacer Back-testing. Esto en aras de tener una mejor idea de que están haciendo los modelos y, si es o no un buen ajuste a los datos. Para profundizar esto, más adelante se utilizarán técnicas de backtesting.
+
 
 ```{r}
 # prediccion auto.arima
@@ -514,18 +524,19 @@ autoplot(ts(df2$t_cabezas), series="Datos") +
 
 ```
 
-Note que, la funcion auto.arima ajusta un modelo ARIMA(2,1,3)
-Ahora, se sabia con los analisis anteriores que la diferencia a tomar era 1 (d=1) y los valores de p y q podrian variar entre los mencionados. 
-Ahora, tambien se sabia que la serie presentaba un comportamiento estacional. Sin embargo la funcion auto.arima NO muestra dicho comportamiento estacional en el modelamiento. 
-Surge una pregunta, ¿Es este el mejor modelo, sin importar un analisis de estacionalidad? o, por otra parte, ¿ la funcion carece de ajuste sufiente para detectar un buen modelo?.
+Note que, la función auto.arima ajusta un modelo ARIMA(2,1,3)
+Ahora, se sabía con los análisis anteriores que la diferencia a tomar era 1 (d=1) y los valores de p y q podrían variar entre los mencionados. 
+Ahora, también se sabía que la serie presentaba un comportamiento estacional. Sin embargo la función auto.arima NO muestra dicho comportamiento estacional en el modelamiento. 
+Surge una pregunta, ¿Es este el mejor modelo, sin importar un análisis de estacionalidad? o, por otra parte, ¿la función carece de ajuste suficiente para detectar un buen modelo?.
 
-Para esto, se seleccionan diferentes modelos propuestos con la intencion de comparar sus valores y verificar cual tendria un mejor rendimiento.
+Para esto, se seleccionan diferentes modelos propuestos con la intención de comparar sus valores y verificar cual tendría un mejor rendimiento.
 
-NOTA: Se utiliza toda la base de datos por ahora, dado que se sospecha se realizarán intervenciones. Lo que en ultimas implica que las predicciones tienen sesgo. Mas adelante se divide entre datos de entrenamiento y datos de prueba para modeloar y predecir.
+NOTA: Se utiliza toda la base de datos por ahora, dado que se sospecha se realizarán intervenciones. Lo que en ultimas implica que las predicciones tienen sesgo. Mas adelante se divide entre datos de entrenamiento y datos de prueba para modelar y predecir.
 
 *Algunos modelos propuestos:*
 
-Se proponen algunos modelos de manera manual. Esto con la idea de ilustrar que, al variar los parametros de los modelos; se pueden obtener diferentes AIC, BIC y en general, diferentes rendimientos. Luego, se calcula su AIC y BIC para contrastar cuales seran los mejores modelos. 
+Se proponen algunos modelos de manera manual. Esto con la idea de ilustrar que, al variar los parámetros de los modelos; se pueden obtener diferentes AIC, BIC y en general, diferentes rendimientos. Luego, se calcula su AIC y BIC para contrastar cuales serán los mejores modelos.
+
 
 ```{r}
 x = df2$t_cabezas
@@ -548,23 +559,25 @@ mod7,mod8,mod9,mod10)[2])
 Como era de esperarse, auto.arima muestra un mejor rendimiento a la hora de escoger modelo de manera manual pero se sospecha, NO es el mejor modelo para ajustar los datos. 
 
 
-## Seleccioonando mejor modelo
+## Seleccionando mejor modelo
 
-En un script a parte, se contrastan un total de 256 modelos (El archivo es de 8.8 mb) y para compilar el html, se presentan dificultades. De esta manera se empiezan a varias los parametros p,d,q, P,D,Q con estacionalidad en 12; para escoger de todos los posibles modelos resultantes, el mejor. 
+En un script aparte, se contrastan un total de 256 modelos (El archivo es de 8.8 mb) y para compilar el html, se presentan dificultades. De esta manera se empiezan a varias los parámetros p,d,q, P,D,Q con estacionalidad en 12; para escoger de todos los posibles modelos resultantes, el mejor.
+
 
 ```{r}
 load('256modelos.Rdata')
 ```
 
-Este archivo contiene el 'summary' de 256 modelos. De aqui, se obtiene despues de un procesamiento; los datos del modelo optimo segun ciertos criterios de seleccion.
+Este archivo contiene el 'summary' de 256 modelos. De aquí, se obtiene después de un procesamiento; los datos del modelo optimo según ciertos criterios de selección.
 
-Los codigos para ver como se calcula los modelos se encuentran *aqui*
+Los códigos para ver cómo se calcula los modelos se encuentran *aquí*
 
-*Modelo optimo segun AIC*
+*Modelo optimo según AIC*
 
-El modelo resultante con mejor rendimiento AIC y BIC no es necesariamente el modelo con un menor valor (Seria tan facil como buscar el minimo de toda la lista) pero, esto no es factible dado que se desea seguir el principio de parsimonia. Esto se menciona dado que el SARIMA optimo era de ordenes (3,1,4)x(4,1,1). Ahora, la diferencia en el ajuste respecto al seleccionado no era mayor.
+El modelo resultante con mejor rendimiento AIC y BIC no es necesariamente el modelo con un menor valor (Seria tan fácil como buscar el mínimo de toda la lista) pero, esto no es factible dado que se desea seguir el principio de parsimonia. Esto se menciona dado que el SARIMA optimo era de ordenes (3,1,4)x(4,1,1). Ahora, la diferencia en el ajuste respecto al seleccionado no era mayor.
 
-Asi pues, el modelo resultante es un SARIMA (1,0,1)x(0,1,0); que presenta un buen rendimiento.
+Así pues, el modelo resultante es un SARIMA (1,0,1)x(0,1,0); que presenta un buen rendimiento.
+
 
 ```{r}
 prueba = Arima(dftimeserie, order = c(1,0,1),
@@ -576,35 +589,34 @@ par(mfrow=c(1,2))
 plot(arroots(prueba),main="Inverse AR roots")
 plot(maroots(prueba),main="Inverse MA roots")
 ```
-Ahora, dicho modelo posee problemas en sus supuestos. Tiene correlacion en sus residuales y problemas de normalidad. 
-
+Ahora, dicho modelo posee problemas en sus supuestos. Tiene correlación en sus residuales y problemas de normalidad.
 ```{r}
 shapiro.test(prueba$residuals)
 ```
-No normalidad segun Shapiro WIlk
+No normalidad según Shapiro Wilk
 
 ```{r}
 jarque.bera.test(prueba$residuals)
 ```
 
-No normalidad, segun Jarque-Bera
-
+No normalidad, según Jarque-Bera
 ```{r}
 qqnorm(prueba$residuals)
 qqline(prueba$residuals)
 ```
-Desviaciones fuertes en el qqplot
+Desviaciones fuertes en el QQ-plot.
 
 
 ```{r}
 summary(prueba)
 ```
 
-Al comparar diferentes medidas entre si, el modelo no necesariamente es el que tiene mejor RMSE, MAE, AIC o BIC. Sin embargo; la diferencia entre estos no era muy significativa y los ajustes son relativamente buenos. 
+Al comparar diferentes medidas entre sí, el modelo no necesariamente es el que tiene mejor RMSE, MAE, AIC o BIC. Sin embargo; la diferencia entre estos no era muy significativa y los ajustes son relativamente buenos. 
 
-Finalmente, se procede a ajustar una prediccion con toda la base de datos dado este modelo. 
+Finalmente, se procede a ajustar una predicción con toda la base de datos dado este modelo. 
 
-*Prediccion modelo seleccionado*
+*Predicción modelo seleccionado*
+
 
 ```{r}
 f_fit <- forecast(prueba)
@@ -614,14 +626,15 @@ f_fit <- forecast(prueba)
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
 
-Note que la prediccion del modelo de auto.arima es mas pobre. Esto dado que; hace falta realizar un ajuste de estacionalidad. Ahora, este modelo como es de esperarse, es mas preciso cuando la prediccion es mas cercana en el tiempo. 
+Note que la predicción del modelo de auto.arima es más pobre. Esto dado que; hace falta realizar un ajuste de estacionalidad. Ahora, este modelo como es de esperarse es más preciso cuando la predicción es más cercana en el tiempo. 
 
 
 *Holt-Winters 1.0*
 
-Analogamente, se procede a realizar un ajuste con un modelo Holt-Winters para predecir. Dicho modelo es calculado con el siguiente codigo y, allí mismo se ajustan las predicciones.
+Análogamente, se procede a realizar un ajuste con un modelo Holt-Winters para predecir. Dicho modelo es calculado con el siguiente código y, allí mismo se ajustan las predicciones.
 
-Se modifican algunos parametros del modelo de Holt-Winters. Despues de realizar algunas pruebas se escoge el siguiente modelo: 
+Se modifican algunos parámetros del modelo de Holt-Winters. Después de realizar algunas pruebas se escoge el siguiente modelo:
+
 
 ```{r}
 # Custom HoltWinters fitting
@@ -639,11 +652,11 @@ autoplot(dftimeserie, series="Datos") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
 
-Note que existe una prediccion parecida a los modelos anteriores pero con IC mas amplios, por tanto; es mens precisa. 
+Note que existe una predicción parecida a los modelos anteriores pero con IC más amplios, por tanto; es menos precisa. 
 
 *Modelo de Holt-Winters 2.0*
 
-Se propone otro modelo con modelo con HW buscando los parametros optimos de manera automatica. 
+Se propone otro modelo con modelo con HW buscando los parámetros óptimos de manera automática.
 
 ```{r}
 # Custom HoltWinters fitting
@@ -658,11 +671,12 @@ autoplot(dftimeserie, series="Datos") +
    autolayer(HW2ensayo.pred, series="Prediction") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
-Note que ahora, el modelo tiene una prediccion mas coherente y un IC mas angosto. Falta preguntarse, ¿Cual es el mejor modelo? Pero, para responder a esta preguntaa se hace la siguiente comparacion.
+Note que ahora, el modelo tiene una predicción más coherente y un IC más angosto. Falta preguntarse, ¿Cuál es el mejor modelo? Pero, para responder a esta pregunta se hace la siguiente comparación.
 
 ## tabla de acurracy de modelos propuestos
 
 Tabla resumen con los modelos propuestos.
+
 
 ```{r}
 model_comp <- data.frame(accuracy(mod1)[1:6],
@@ -677,12 +691,13 @@ colnames(model_comp) <- c('auto.arima','Ajustado','HW1','HW2')
 model_comp %>% kableExtra::kable() 
 ```
 
-En general, los modelos que tienen mejor rendimiento son los HW 1 y 2. Se ha de escoger uno de ellos para modelar. Sin embargo, se deben realizar pruebas de backtesing para comparar. No necesariamente la tecnica es aplicable a todos los modelos pero, ¿por qué no probar?
+En general, los modelos que tienen mejor rendimiento son los HW 1 y 2. Se ha de escoger uno de ellos para modelar. Sin embargo, se deben realizar pruebas de backtesing para comparar. No necesariamente la técnica es aplicable a todos los modelos, pero, ¿por qué no probar?
 
 ## Back-Testing
 
-Para modelar correctamente, se utilza back-testing; aqui se divide en datos de entrenamiento y prueba.
-Se trabajara con el 80% de los datos. Asi pues:
+Para modelar correctamente, se utiliza back-testing; aquí se divide en datos de entrenamiento y prueba.
+Se trabajará con el 80% de los datos. Así pues:
+
 
 ```{r}
 
@@ -718,11 +733,12 @@ autoplot(a1, series="Datos entrenamiento") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
 
-Con la base de datos dividida, se procede a analizar el ajuste de los modelos via Back-Testing.
+Con la base de datos dividida, se procede a analizar el ajuste de los modelos vía Back-Testing.
 
 ## Modelos con Back-Testing
 
-Todos los modelos utilizados en la serie anterior, se utilizan para predecir ahora; evaluarlos via back-Testing. 
+Todos los modelos utilizados en la serie anterior se utilizan para predecir ahora; evaluarlos vía back-Testing.
+
 
 ```{r echo=FALSE}
 mod1 = auto.arima(s1, stepwise = F, approximation = F, seasonal = T,) # ARIMA(0,1,5)
@@ -765,9 +781,9 @@ rownames(tabla) = c("Modelo 1","Modelo 2","Modelo 3","Modelo 4")
 tabla %>% kable
 ```
 
-De esta manera, entonces; el modelo optimo será el que tenga un menor MSE. El modelo con mejor rendimiendo es el modelo 4, que respectivamente corresponde al modelo con menor MSE. 
+De esta manera, entonces; el modelo optimo será el que tenga un menor MSE. El modelo con mejor rendimiento es el modelo 4, que respectivamente corresponde al modelo con menor MSE. 
 
-Se adjuntan las siguientes metricas para la seleccion ideal del modelo.
+Se adjuntan las siguientes métricas para la selección ideal del modelo.
 
 ```{r}
 model_comp <- data.frame(accuracy(mod1)[1:6],
@@ -781,14 +797,14 @@ colnames(model_comp) <- c('Modelo 1','Modelo 2','Modelo 3','Modelo 4')
 
 model_comp %>% kableExtra::kable() 
 ```
-Segunla anterior tabla, el modelo con mejor rendimiento es el modelo 4. Se muestra acontinuacion.
-
+Según la anterior tabla, el modelo con mejor rendimiento es el modelo 4. Se muestra a continuación.
 ```{r}
 mod4$model
 ```
 
-Este es un modelo Holt-Winters con los parametros anteriores.Ahora, como este modelo no tiene supuestos de normalidad en los residuales...
-Pues bastaria lanzar una prediccion. 
+Este es un modelo Holt-Winters con los parámetros anteriores. Ahora, como este modelo no tiene supuestos de normalidad en los residuales...
+Pues bastaría lanzar una predicción.
+
 
 ```{r}
 # prediccion HW
@@ -803,8 +819,7 @@ autoplot(dftimeserie, series="Datos") +
 
 ```
 
-En el grafico anterior, se tiene los datos en rojo, los ajustados por el modelo HW en verde u finalmente la prediccion para los datos de prueba. No se grafica el IC dado que puede ser caotico para visualizar. Ahora, dicho grafico seria:
-
+En el grafico anterior, se tiene los datos en rojo, los ajustados por el modelo HW en verde u finalmente la predicción para los datos de prueba. No se grafica el IC dado que puede ser caótico para visualizar. Ahora, dicho grafico seria:
 ```{r}
 f_fit <- forecast(mod4,h=34)
 autoplot(dftimeserie, series="Datos") + 
@@ -815,22 +830,24 @@ autoplot(dftimeserie, series="Datos") +
 
 ```
 
-Ahora, acá se tienen los datos reales en rojo y solo la prediccion. Note como el modelo tiene peor rendimiento que cuando se ajusta con la totalidad de la base de datos. Sin embargo, el ajuste de la serie predicha por el modelo no es necesariamente malo. AHora, recuerde que entre mas predicciones en el tiempo se hagan, mas imprecisa es la prediccion. 
+Ahora, acá se tienen los datos reales en rojo y solo la predicción. Note como el modelo tiene peor rendimiento que cuando se ajusta con la totalidad de la base de datos. Sin embargo, el ajuste de la serie predicha por el modelo no es necesariamente malo. Ahora, recuerde que entre más predicciones en el tiempo se hagan, más imprecisa es la predicción. 
 
 
 
-## Analisis de outliers
+## Análisis de outliers
 
-Observe de nuevo la serie original. Con esta serie se busca entonces entender si existe un comportamiento de datos atipicos. Ahora, note que:
+Observe de nuevo la serie original. Con esta serie se busca entonces entender si existe un comportamiento de datos atípicos. Ahora, note que:
+
 
 ```{r echo=FALSE}
 plot(dftimeserie)
 ```
-De manera descriptiva se oberva que para el año 2020 se tiene una caida mas pronunciada. Se desea observar si para dicho dato existe evidencia de ser un outlier.
+De manera descriptiva se observa que para el año 2020 se tiene una caída más pronunciada. Se desea observar si para dicho dato existe evidencia de ser un outlier.
 
-La funcion tso del paquete tsoutliers permite analizar los datos atipicos de una serie de tiempo. 
+La función tso del paquete tsoutliers permite analizar los datos atípicos de una serie de tiempo. 
 
 *Modelo de Outliers*
+
 
 ```{r}
 mod_outliers <- tso(dftimeserie, delta=0.7)
@@ -840,7 +857,7 @@ mod_outliers
 
 Por defecto, el modelo de los outliers deja fijado un delta de 0.7; se propone variar el delta para empezar a detectar cuales son los outliers detectados al variar delta. Dado el coste computacional, se definen deltas menores a 0.9 con saltos de 0.1
 
-Note que el modelo seleccionado via 256 modelos, es el mismo que selecciona automaticamente la funcion tso.
+Note que el modelo seleccionado vía 256 modelos, es el mismo que selecciona automáticamente la función tso.
 
 
 ```{r}
@@ -894,13 +911,14 @@ mod_outliers9$outliers %>% kable(label = 'Delta 9')
 ```{r echo=FALSE}
 mod_outliers10$outliers %>% kable(label = 'Delta 10')
 ```
-Note que de manera general, los modelos hasta un delta de 0.6 identifican a la observacion 139 como un dato atipico. Este dato coincide con Marzo del 2020, en cual se declara pandemia. Por este motivo, se podria esperar que la observacion 139 sea un dato atipico AO, es decir; afectó momentaneamente la serie de tiempo y luego esta se normalizó. Por tal motivo se concluye que se ha de modelar con una funcion pulso. 
+Note que, de manera general, los modelos hasta un delta de 0.6 identifican a la observación 139 como un dato atípico. Este dato coincide con Marzo del 2020, en cual se declara pandemia. Por este motivo, se podría esperar que la observación 139 sea un dato atípico AO, es decir; afectó momentáneamente la serie de tiempo y luego esta se normalizó. Por tal motivo se concluye que se ha de modelar con una función pulso. 
 
-Ahora, al variar el parametro, aparecen otros outliers e incluso el 139 es detectado como otro tipo de outlier, sin embargo; todos los otros no tuvieron causas asignables para ser dictaminados como datos atipicos por variables exogemas; asi que se opta por aplicarle una funcion pulso. 
+Ahora, al variar el parámetro, aparecen otros outliers e incluso el 139 es detectado como otro tipo de outlier, sin embargo; todos los otros no tuvieron causas asignables para ser dictaminados como datos atípicos por variables exógenas; así que se opta por aplicarle una función pulso. 
 
-## Intervencion
+## Intervención
 
-Se procede a dividir la serie antes de la intervencion. Esto se selecciona basado en una idea muy simple; posiblemente la pandemia pudo afectar el numero de sacrificios mensuales. En la serie, es el dato 139 el cal corresponde a marzo del 2020 (donde se evidencia la caida).
+Se procede a dividir la serie antes de la intervención. Esto se selecciona basado en una idea muy simple; posiblemente la pandemia pudo afectar el número de sacrificios mensuales. En la serie, es el dato 139 el cual corresponde a marzo del 2020 (donde se evidencia la caída).
+
 
 ```{r echo=FALSE}
 ensayointervencio <- window(dftimeserie, start=time(dftimeserie)[1],
@@ -909,11 +927,12 @@ paco = ensayointervencio %>% auto.arima(stepwise = F,approximation = F)
 paco %>% summary()
 ```
 
-Finalmente, se tiene que los ordenes del modelo con auto.arima; asi pues, se tiene un ARIMA(3,0,0)(0,1,2)[12]; para un modelo ajustado antes de la intervencion. 
+Finalmente, se tiene que los órdenes del modelo con auto.arima; así pues, se tiene un ARIMA(3,0,0)(0,1,2)[12]; para un modelo ajustado antes de la intervención. 
 
-Entonces, este es el modelo con la intervencion a la observacion 139.
+Entonces, este es el modelo con la intervención a la observación 139.
 
-## *Funcion pulso:*
+## *Función pulso:*
+
 
 ```{r}
 modelo1superintervencion <- arimax(dftimeserie, order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
@@ -922,13 +941,14 @@ transfer=list(c(1, 0)))
 modelo1superintervencion %>% coeftest()
 ```
 
-Dada esta tabla, se busca entender cual de los coeficientes son o no significativos. 
+Dada esta tabla, se busca entender cuál de los coeficientes son o no significativos. 
 
-Entonces, como el AR1 NO es significativo; se concluye que la funcion a utilizar es una funcion pulso. Dicho de otra manera (Mas bonita):
+Entonces, como el AR1 NO es significativo; se concluye que la función a utilizar es una función pulso. Dicho de otra manera (Mas bonita):
 
-El δ1 estimado (0.034201x100.000 =3420.1 ) no es significativo con un nivel de significancia del 5 %. En cambio, el ω1 estimado (-0.692464x100000=-69246.4 ) sí es significativo; lo que implica que la caida dada por pandemia es de cerca de 69246 cabezas de marranos.
+El δ1 estimado (0.034201x100.000 =3420.1 ) no es significativo con un nivel de significancia del 5 %. En cambio, el ω1 estimado (-0.692464x100000=-69246.4 ) sí es significativo; lo que implica que la caída dada por pandemia es de cerca de 69246 cabezas de marranos.
 
-En pocas palabras, la pandemia afectó en promedio la produccion de cabezas porcinas en casi 70 mil unidades menos de lo que se producia normalmente. 
+En pocas palabras, la pandemia afectó en promedio la producción de cabezas porcinas en casi 70 mil unidades menos de lo que se producía normalmente.
+
 
 ```{r}
 modelo1superintervencion2 <- arimax(dftimeserie, order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
@@ -938,9 +958,9 @@ transfer=list(c(0, 0)))
 modelo1superintervencion2 %>% coeftest()
 ```
 
-Finalmente, al analizar los datos realizando la intervencion, se concluye que el modelo es significativo en todos sus parametros entonces; se procede a predecir con dicho modelo intervenido.
+Finalmente, al analizar los datos realizando la intervención, se concluye que el modelo es significativo en todos sus parámetros entonces; se procede a predecir con dicho modelo intervenido.
 
-## Prediccion con modelo intervenido. 
+## Predicción con modelo intervenido. 
 
 Para realizar las predicciones con el modelo intervenido, se ha de revisar los supuestos del modelo. Entonces:
 
@@ -948,33 +968,33 @@ Para realizar las predicciones con el modelo intervenido, se ha de revisar los s
 modelo1superintervencion2 %>% checkresiduals()
 ```
 
-Al analizar de manera descriptiva, el modelo parece seguir una distribucion normal, la ACF detecta autocorrelacion y, parece que los errores tienen  problemas de autocorrelacion.
+Al analizar de manera descriptiva, el modelo parece seguir una distribución normal, la ACF detecta autocorrelación y, parece que los errores tienen problemas de autocorrelación.
 
-Respecto a outliers, se detectan algunos puntos marcados pero no tienen asociados  causas asignables.
+Respecto a outliers, se detectan algunos puntos marcados, pero no tienen asociados causas asignables.
 
-Varianza constante (en principio); Por otra parte, se observa que la prueba de correlacion de los residuales de Ljung-Box determina correlacion en los residuales. 
+Varianza constante (en principio); Por otra parte, se observa que la prueba de correlación de los residuales de Ljung-Box determina correlación en los residuales. 
 
-Aun asi, dada las condiciones del modelo se decide *NO* intervenir nuevamente, puesto que se podria sobreajustar. 
+Aun así, dada las condiciones del modelo se decide *NO* intervenir nuevamente, puesto que se podría sobre ajustar. 
 
-*Normalidad residuales:*
+*Normalidad residuales: *
+
 
 ```{r echo=FALSE}
 modelo1superintervencion2$residuals %>% shapiro.test()
 ```
-Note que, aunque asi lo parezca; los errores segun la prueba de shapiro-wilk no son normales. Se procede a analizar el qqplot.
-
+Note que, aunque así lo parezca; los errores según la prueba de Shapiro-Wilk no son normales. Se procede a analizar el QQ-plot.
 ```{r echo=FALSE}
 qqnorm(modelo1superintervencion2$residuals)
 qqline(modelo1superintervencion2$residuals)
 ```
 
-Note que los residuales tienen en general un buen ajuste a la recta de normalidad. El qqplot tiene algunos datos atipicos. 
+Note que los residuales tienen en general un buen ajuste a la recta de normalidad. El QQ-plot tiene algunos datos atípicos. 
 
-## Prediciones con modelo intervenido
+## Predicciones con modelo intervenido
 
 Finalmente, se procede a realizar las predicciones con el modelo intervenido.
 
-A continuacion se muestra el modelo intervenido.
+A continuación se muestra el modelo intervenido.
 
 ```{r echo=FALSE}
 modelo1superintervencion2
@@ -1019,10 +1039,11 @@ se = inter.pred$se # para crear los IC
 MSE = mean((df2$t_cabezas- fitted.values(modelo_intervenido)))^2
 MSE
 ```
-El MSE de este modelo es del orden de 0.000007387; Hasta el momento, ningun modelo ha ajustado un MSE tan pequeño.
-De esta manera, este modelo con intervenciones; parece el modelo mas confiable para realizar predicciones.
+El MSE de este modelo es del orden de 0.000007387; Hasta el momento, ningún modelo ha ajustado un MSE tan pequeño.
+De esta manera, este modelo con intervenciones; parece el modelo más confiable para realizar predicciones.
 
-# Grafica de la prediccion
+# Grafica de la predicción
+
 
 ```{r}
 serie.original = df2$t_cabezas
