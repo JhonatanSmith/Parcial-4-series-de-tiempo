@@ -11,7 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 require(dplyr)
+require(lmtest)
+require(tseries)
+require(TSA)
 require(astsa)
+require(tsoutliers)
 require(kableExtra)
 require(tidyverse)
 require(ggplot2)
@@ -240,7 +244,7 @@ Una vez graficada la serie, se proceden a realizar analisis descriptivos que per
 ```{r}
 df2$t_cabezas=df2$t_cabezas
 vectores <- c(df2$t_cabezas)
-dftimeserie <-ts(vectores, frequency = 12)
+dftimeserie <-ts(vectores, frequency = 12, start = c(2008,10))
 descompuesta=decompose(dftimeserie)
 plot(descompuesta)
 
@@ -257,38 +261,36 @@ Para la serie, se hace una descomposicion aditiva de los datos. Estos revelan qu
  El siguiente grafico permite ver de manera mas clara la estacionalidad. 
 
 ```{r}
-
-
 ggseasonplot(dftimeserie,year.labels=TRUE,continuous=TRUE)
 ```
-Con una escala de 100.000 cerdos sacrificados por cada unidad representada, se tiene que el mes de marzo destaca por tener un mayor numero de sacrificios en su respectivo año. Para este caso, se puede deducir una estacionalidad anual en dicho mes. Se debe ahondar en el fenomeno para entender por qué en marzo se sacrifican más cerdos. 
+Con una escala de 100.000 cerdos sacrificados por cada unidad representada, se tiene que el mes de diciembre destaca por tener un mayor numero de sacrificios en su respectivo año. Para este caso, se puede deducir una estacionalidad anual en dicho mes. Se debe ahondar en el fenomeno para entender por qué en diciembre se sacrifican más cerdos. Ahora, el sentido comun apunta a que, en visperas de epoca navideña el consumo de carnes aumenta.
 
 ```{r}
 ts_seasonal((dftimeserie), type="box")
 
 ```
-Al graficar los valores respectivos de la variable asociados a cada mes, se tiene que la media para el mes de marzo es ligeramente mayor. Para apreciar mejor esta diferencia, se elimina la tendencia en los datos y se realiza el grafico.
+Al graficar los valores respectivos de la variable asociados a cada mes, se tiene que la media para el mes de diciembre es ligeramente mayor. Para apreciar mejor esta diferencia, se elimina la tendencia en los datos y se realiza el grafico.
 
 ```{r}
 ts_seasonal(diff(dftimeserie), type="box")
 
 ```
-Ahora, es más claro que el mes de marzo presenta un comportamiento por encima de la media. Esto implica que en dicho mes, se sacrifican mas cerdos. De manera analoga, abril se encuentra por debajo de la media general del proceso. Estos dos meses han de ser tenidos en cuenta.
+Ahora, es más claro que el mes de diciembre presenta un comportamiento por encima de la media. Esto implica que en dicho mes, se sacrifican mas cerdos. De manera analoga, enero se encuentra por debajo de la media general del proceso. Estos dos meses han de ser tenidos en cuenta.
 
 ```{r}
 ts_heatmap(diff(dftimeserie), color = "Reds")
 ```
 
-En el mapa, se tiene de izquiera a derecha, el mismo mes en diferentes años. Ahora, note que en marzo, siempre se nota un mayor numero de sacrificios. 
+En el mapa, se tiene de izquiera a derecha, el mismo mes en diferentes años. Ahora, note que en diciembre, siempre se nota un mayor numero de sacrificios. 
 
-Verticalmente se tiene un año representado. Por año, nuevamente Marzo siempre destaca por ser el mes con mayor numero de sacrificios. 
+Verticalmente se tiene un año representado. Por año, nuevamente diciembre siempre destaca por ser el mes con mayor numero de sacrificios. 
 
 ```{r}
 
 ggseasonplot(dftimeserie, polar = TRUE)
 ```
 
-Se tiene a  la derecha el conteo de años a partir del 2008, asi; 1 es 2008 y year 14 es el año 2022 (2008 + 14). Ahora, Cada año se encuentra graficado y espera ver estacionalidad en los datos. nuevamente, Marzo, junio destacan como dos meses con 'picos' y abrazos. 
+Se tiene a  la derecha el conteo de años a partir del 2008,ahora; Cada año se encuentra graficado y espera ver estacionalidad en los datos. nuevamente, diciembre,destaca como mes con 'picos' 
 
 
 ## Modelamiento de la serie 
@@ -314,54 +316,50 @@ Ahora, la estacionalidad se ve marcada en 12.
 ```{r}
 pacf(df2$t_cabezas, lag.max = 35)
 ```
-## Partimos los datos
-
-```{r}
-
-train <- window(dftimeserie, start=time(dftimeserie)[1],
-                end = time(dftimeserie)[length(dftimeserie) - 12])
-
-test <- window(dftimeserie, start = time(dftimeserie)[length(dftimeserie)
-- 12 + 1],
-end = time(dftimeserie)[length(dftimeserie)])
-
-```
-
-
 Al analizar la PACF, se percibe corte en los primeros lag (menos el 4) y en 8,11 y 12. Nuevamente, hay quien podria argumentar un comportamiento senoidal, por tanto se proponen modelos SARIMA(p,d,q)x(P,D,Q) para modelar la serie. Esto se realzia con la intencion de entender 
 
 En definitiva, al analizar la ACF y la PACF, el modelo resultante ha de ser un SARIMA, donde la frecuencia asociada al mismo ha de ser 12.
 
+
 ## Modelando la serie: SARIMA vs auto.arima
 
-Se procede a realizar un ajuste de un modelo para la serie con la funcion de auto.arima; se desea comparar los resultados de dicha funcion con los analisis descriptivos hasta la fecha. 
+Se procede a realizar un ajuste de un modelo para la serie con la funcion de auto.arima; se desea comparar los resultados de dicha funcion con los analisis descriptivos hasta el momento.
 
 ```{r}
 mod1 = auto.arima(df2$t_cabezas, stepwise = F, approximation = F, seasonal = T,)
-```
-
-```{r}
 checkresiduals(mod1)
 ```
+
+La ACF de los residuales muestra correlacion en lag 12. Parece haber normalidad y a priori no se idenfitican datos atipicos. Ahora, tambien se aclara que la respectiva prueba de Ljung-Box rechaza no autocorrelacion. 
 
 ```{r}
 shapiro.test(mod1$residuals)
 ```
+La normalidad en los residuales no se cumple dado el test de shapiro-Wilk
+
 ```{r}
-require(tseries)
+
 jarque.bera.test(mod1$residuals)
 ```
+La normalidad en los residuales no se cumple dado el test de jarque-bera
+
 
 ```{r}
 qqnorm(mod1$residuals)
 qqline(mod1$residuals)
 ```
 
-
+El grafico qq-plot parece no tener desviaciones fuertes, a exepcion del final del grafico. 
 
 ```{r}
 summary(mod1)
 ```
+Finalemente, auto.arima ajusta un modelo ARIMA (2,1,3); lo cual es contra intruitivo con el analisis estacional ya realizado. 
+
+## Prediccion auto.arima
+
+Se proponen realizar predicciones con los modelos teniendo en cuenta toda la base de datos, sin hacer Back-testing. Esto en aras de tener una mejor idea de que están haciendo los modelos y, si es o no un buen ajuste a los datos. Para profundizar esto, más adelante se utilizaran tecnicas de backtesting.
+
 ```{r}
 # prediccion auto.arima
 
@@ -374,7 +372,6 @@ autoplot(ts(df2$t_cabezas), series="Datos") +
 
 ```
 
-
 Note que, la funcion auto.arima ajusta un modelo ARIMA(2,1,3)
 Ahora, se sabia con los analisis anteriores que la diferencia a tomar era 1 (d=1) y los valores de p y q podrian variar entre los mencionados. 
 Ahora, tambien se sabia que la serie presentaba un comportamiento estacional. Sin embargo la funcion auto.arima NO muestra dicho comportamiento estacional en el modelamiento. 
@@ -382,34 +379,11 @@ Surge una pregunta, ¿Es este el mejor modelo, sin importar un analisis de estac
 
 Para esto, se seleccionan diferentes modelos propuestos con la intencion de comparar sus valores y verificar cual tendria un mejor rendimiento.
 
-NOTA: Se utiliza toda la base de datos por ahora, dado que se sospecha se realizarán intervenciones. 
+NOTA: Se utiliza toda la base de datos por ahora, dado que se sospecha se realizarán intervenciones. Lo que en ultimas implica que las predicciones tienen sesgo. Mas adelante se divide entre datos de entrenamiento y datos de prueba para modeloar y predecir.
 
-```{r}
-#mod2 = sarima(df2$t_cabezas,)
+*Algunos modelos propuestos:*
 
-# SEGUN ACF (p,q,d)
-
-# Corte en 1
-# Corte en 4
-
-# SEGUN ACF (P,Q,D)
-# Corte en 12
-# Decaimiento ESTACIONAL
-
-# SEGUN PACF 
-# Corte 1, o en 2
-# Corte en 12 NO DECAIMIENTO EXPONENCIAL 
-
-# SIN COMPONENTE ESTACIONAL
-# ARIMA(0,1,1)
-# ARIMA (0,1,2)
-# ARIMA (1,1,1)
-# ARIMA (1,1,2), (2,1,1),(2,1,2),(3,1,1),(3,1,2),(1,1,3)
-# ARIMA (3,1,3)
-
-# CON COMPONENTE ESTACIONAL
-
-```
+Se proponen algunos modelos de manera manual. Esto con la idea de ilustrar que, al variar los parametros de los modelos; se pueden obtener diferentes AIC, BIC y en general, diferentes rendimientos. Luego, se calcula su AIC y BIC para contrastar cuales seran los mejores modelos. 
 
 ```{r}
 x = df2$t_cabezas
@@ -422,110 +396,93 @@ mod7 = arima(x, order = c(3,1,1))
 mod8 = arima(x, order = c(3,1,2))
 mod9 = arima(x, order = c(1,1,3))
 mod10 = arima(x, order = c(3,1,3))
-```
 
-```{r}
-
-# AIC mod 1: 97.68
-#mod2 %>%BIC
 cbind(AIC(mod1,mod2,mod3,mod4,mod5,mod6,
 mod7,mod8,mod9,mod10),BIC(mod1,mod2,mod3,mod4,mod5,mod6,
 mod7,mod8,mod9,mod10)[2])
 
 ```
 
-Como era de esperarse, auto.arima muestra un mejor rendimiento a la hora de escoger modelo. 
+Como era de esperarse, auto.arima muestra un mejor rendimiento a la hora de escoger modelo de manera manual pero se sospecha, NO es el mejor modelo para ajustar los datos. 
 
 
 ## Seleccioonando mejor modelo
 
-De un total de 256 modelos se seleccionan:
-
+En un script a parte, se contrastan un total de 256 modelos (El archivo es de 8.8 mb) y para compilar el html, se presentan dificultades. De esta manera se empiezan a varias los parametros p,d,q, P,D,Q con estacionalidad en 12; para escoger de todos los posibles modelos resultantes, el mejor. 
 
 ```{r}
 load('256modelos.Rdata')
 ```
 
-siguiente paso con los 256 modelos. Se importan 256 modelos previamente ajustados. Se seleccionan los menores AIC y BIC. 
+Este archivo contiene el 'summary' de 256 modelos. De aqui, se obtiene despues de un procesamiento; los datos del modelo optimo segun ciertos criterios de seleccion.
+
+Los codigos para ver como se calcula los modelos se encuentran *aqui*
 
 *Modelo optimo segun AIC*
 
-```{r}
-prueba = Arima(dftimeserie, order = c(0,1,1),
-               seasonal = list(order = c(0,1,0),period =12))
-```
+El modelo resultante con mejor rendimiento AIC y BIC no es necesariamente el modelo con un menor valor (Seria tan facil como buscar el minimo de toda la lista) pero, esto no es factible dado que se desea seguir el principio de parsimonia. Esto se menciona dado que el SARIMA optimo era de ordenes (3,1,4)x(4,1,1). Ahora, la diferencia en el ajuste respecto al seleccionado no era mayor.
+
+Asi pues, el modelo resultante es un SARIMA (1,0,1)x(0,1,0); que presenta un buen rendimiento.
 
 ```{r}
+prueba = Arima(dftimeserie, order = c(1,0,1),
+               seasonal = list(order = c(0,1,0),period =12))
 checkresiduals(prueba)
 ```
+
+Ahora, dicho modelo posee problemas en sus supuestos. Tiene correlacion en sus residuales y problemas de normalidad. 
 
 ```{r}
 shapiro.test(prueba$residuals)
 ```
+No normalidad segun Shapiro WIlk
 
 ```{r}
 jarque.bera.test(prueba$residuals)
 ```
 
+No normalidad, segun Jarque-Bera
+
 ```{r}
 qqnorm(prueba$residuals)
 qqline(prueba$residuals)
 ```
-
+Desviaciones fuertes en el qqplot
 
 
 ```{r}
 summary(prueba)
 ```
 
+Al comparar diferentes medidas entre si, el modelo no necesariamente es el que tiene mejor RMSE, MAE, AIC o BIC. Sin embargo; la diferencia entre estos no era muy significativa y los ajustes son relativamente buenos. 
+
+Finalmente, se procede a ajustar una prediccion con toda la base de datos dado este modelo. 
+
+*Prediccion modelo seleccionado*
+
 ```{r}
 f_fit <- forecast(prueba)
  autoplot(dftimeserie, series="Datos") + 
-   autolayer(prueba$fitted, series="SARIMA(0,1,1)(0,1,0)[12] ") +
+   autolayer(prueba$fitted, series="SARIMA(1,0,1)(0,1,0)[12] ") +
    autolayer(f_fit, series="Prediction") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
 
-Note que la prediccion del modelo de auto.arima es mas pobre. Esto dado que; hace falta realizar un ajuste de estacionalidad. 
-
-*Modelo de Holt-Winters*
+Note que la prediccion del modelo de auto.arima es mas pobre. Esto dado que; hace falta realizar un ajuste de estacionalidad. Ahora, este modelo como es de esperarse, es mas preciso cuando la prediccion es mas cercana en el tiempo. 
 
 
-```{r}
-HW1 <- hw(dftimeserie)
-HW1prueba <- HoltWinters(dftimeserie)
-```
+*Holt-Winters 1.0*
 
-```{r}
-f_fit <- forecast(HW1)
+Analogamente, se procede a realizar un ajuste con un modelo Holt-Winters para predecir. Dicho modelo es calculado con el siguiente codigo y, allí mismo se ajustan las predicciones.
 
-autoplot(dftimeserie, series="Datos") + 
-   autolayer(HW1$fitted, series="Modelo auto.arima ") +
-   autolayer(f_fit, series="Prediction") +
-   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
-
-```
-```{r}
-checkresiduals(HW1)
-```
-
-```{r}
-shapiro.test(HW1$residuals)
-```
-
-```{r}
-jarque.bera.test(HW1$residuals)
-```
-
-```{r}
-qqnorm(HW1$residuals)
-qqline(HW1$residuals)
-```
+Se modifican algunos parametros del modelo de Holt-Winters. Despues de realizar algunas pruebas se escoge el siguiente modelo: 
 
 ```{r}
 # Custom HoltWinters fitting
 HW2 <- hw(dftimeserie, alpha=0.2, beta=0.1, gamma=0.1)
 ```
+
+Y las respectivas predicciones asociadas a dicho modelo son:
 
 ```{r}
 HW2.pred <- forecast(HW2)
@@ -535,6 +492,12 @@ autoplot(dftimeserie, series="Datos") +
    autolayer(HW2.pred, series="Prediction") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
+
+Note que existe una prediccion parecida a los modelos anteriores pero con IC mas amplios, por tanto; es mens precisa. 
+
+*Modelo de Holt-Winters 2.0*
+
+Se propone otro modelo con modelo con HW buscando los parametros optimos de manera automatica. 
 
 ```{r}
 # Custom HoltWinters fitting
@@ -549,251 +512,298 @@ autoplot(dftimeserie, series="Datos") +
    autolayer(HW2ensayo.pred, series="Prediction") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
+Note que ahora, el modelo tiene una prediccion mas coherente y un IC mas angosto. Falta preguntarse, ¿Cual es el mejor modelo? Pero, para responder a esta preguntaa se hace la siguiente comparacion.
+
 ## tabla de acurracy de modelos propuestos
 
+Tabla resumen con los modelos propuestos.
+
 ```{r}
-model_comp <- data.frame(accuracy(mod1)[1:7],
-                         accuracy(prueba)[1:7],
-                        accuracy(p2)[1:7],
-                        accuracy(HW1)[1:7],
-                        accuracy(HW2)[1:7],
-                        accuracy(HW2ensayo)[1:7],
+model_comp <- data.frame(accuracy(mod1)[1:6],
+                         accuracy(prueba)[1:6],
+                        accuracy(HW2)[1:6],
+                        accuracy(HW2ensayo)[1:6],
                          row.names = c("ME", "RMSE",
                                        "MAE", "MPE",
-                                       "MAPE", "MASE",
-                                       "ACF1"))
-colnames(model_comp) <- c('mod1','prueba','p2','HW1','HW2','HW2ensayo')
+                                       "MAPE","MASE"))
+colnames(model_comp) <- c('auto.arima','Ajustado','HW1','HW2')
 
 model_comp %>% kableExtra::kable() 
 ```
 
-
-
-
+En general, los modelos que tienen mejor rendimiento son los HW 1 y 2. Se ha de escoger uno de ellos para modelar. Sin embargo, se deben realizar pruebas de backtesing para comparar. No necesariamente la tecnica es aplicable a todos los modelos pero, ¿por qué no probar?
 
 ## Analisis de outliers
 
-Observe de nuevo la serie original.
+Observe de nuevo la serie original. Con esta serie se busca entonces entender si existe un comportamiento de datos atipicos. Ahora, note que:
 
-```{r}
+```{r echo=FALSE}
 plot(dftimeserie)
 ```
+De manera descriptiva se oberva que para el año 2020 se tiene una caida mas pronunciada. Se desea observar si para dicho dato existe evidencia de ser un outlier.
+
+La funcion tso del paquete tsoutliers permite analizar los datos atipicos de una serie de tiempo. 
+
+*Modelo de Outliers*
+
 ```{r}
-require(tsoutliers)
 mod_outliers <- tso(dftimeserie, delta=0.7)
-mod_outliers
+
+mod_outliers 
 ```
+
+Por defecto, el modelo de los outliers deja fijado un delta de 0.7; se propone variar el delta para empezar a detectar cuales son los outliers detectados al variar delta. Dado el coste computacional, se definen deltas menores a 0.9 con saltos de 0.1
+
+Note que el modelo seleccionado via 256 modelos, es el mismo que selecciona automaticamente la funcion tso.
+
+
 ```{r}
+# Modelos aplicados de esta forma por menos coste computacional
+mod_outliers0 <- tso(dftimeserie, delta=0)
+mod_outliers1<- tso(dftimeserie, delta=0.1)
+mod_outliers2 <- tso(dftimeserie, delta=0.2)
+mod_outliers3<- tso(dftimeserie, delta=0.3)
+mod_outliers4 <- tso(dftimeserie, delta=0.4)
+mod_outliers5 <- tso(dftimeserie, delta=0.5)
+mod_outliers6 <- tso(dftimeserie, delta=0.6)
+mod_outliers7 <- tso(dftimeserie, delta=0.7)
+mod_outliers8 <- tso(dftimeserie, delta=0.8)
+mod_outliers9 <- tso(dftimeserie, delta=0.9)
+mod_outliers10 <- tso(dftimeserie, delta=1)
+
+```
+
+```{r echo=FALSE}
+mod_outliers0$outliers %>% kable(label = 'Delta 0')
+```
+
+```{r echo=FALSE}
+mod_outliers1$outliers %>% kable(label = 'Delta 1')
+```
+
+```{r echo=FALSE}
+mod_outliers2$outliers %>% kable(label = 'Delta 2')
+```
+```{r echo=FALSE}
+mod_outliers3$outliers %>% kable(label = 'Delta 3')
+```
+```{r echo=FALSE}
+mod_outliers4$outliers %>% kable(label = 'Delta 4')
+```
+```{r echo=FALSE}
+mod_outliers5$outliers %>% kable(label = 'Delta 5')
+```
+```{r echo=FALSE}
+mod_outliers6$outliers %>% kable(label = 'Delta 6')
+```
+```{r echo=FALSE}
+mod_outliers7$outliers %>% kable(label = 'Delta 7')
+```
+```{r echo=FALSE}
+mod_outliers8$outliers %>% kable(label = 'Delta 8')
+```
+```{r echo=FALSE}
+mod_outliers9$outliers %>% kable(label = 'Delta 9')
+```
+```{r echo=FALSE}
+mod_outliers10$outliers %>% kable(label = 'Delta 10')
+```
+Note que de manera general, los modelos hasta un delta de 0.6 identifican a la observacion 139 como un dato atipico. Este dato coincide con Marzo del 2020, en cual se declara pandemia. Por este motivo, se podria esperar que la observacion 139 sea un dato atipico AO, es decir; afectó momentaneamente la serie de tiempo y luego esta se normalizó. Por tal motivo se concluye que se ha de modelar con una funcion pulso. 
+
+Ahora, al variar el parametro, aparecen otros outliers e incluso el 139 es detectado como otro tipo de outlier, sin embargo; todos los otros no tuvieron causas asignables para ser dictaminados como datos atipicos por variables exogemas; asi que se opta por aplicarle una funcion pulso. 
+
+## Intervencion
+
+Se procede a dividir la serie antes de la intervencion. Esto se selecciona basado en una idea muy simple; posiblemente la pandemia pudo afectar el numero de sacrificios mensuales. En la serie, es el dato 139 el cal corresponde a marzo del 2020 (donde se evidencia la caida).
+
+```{r echo=FALSE}
 ensayointervencio <- window(dftimeserie, start=time(dftimeserie)[1],
                 end = time(dftimeserie)[138])
+paco = ensayointervencio %>% auto.arima(stepwise = F,approximation = F) 
+paco %>% summary()
 ```
 
+Finalmente, se tiene que los ordenes del modelo con auto.arima; asi pues, se tiene un ARIMA(3,0,0)(0,1,2)[12]; para un modelo ajustado antes de la intervencion. 
 
+Entonces, este es el modelo con la intervencion a la observacion 139.
 
-
-
-
-
-
-# Base de datos nacimientos hospital 
+## *Funcion pulso:*
 
 ```{r}
-
-# fn para calcular las raices unitarias y graficas bien chimbita
-arroots <- function(object)
-{
-  if(!("Arima" %in% class(object)) &
-     !("ar" %in% class(object)))
-    stop("object must be of class Arima or ar")
-  if("Arima" %in% class(object))
-    parvec <- object$model$phi
-  else
-    parvec <- object$ar
-  if(length(parvec) > 0)
-  {
-    last.nonzero <- max(which(abs(parvec) > 1e-08))
-    if (last.nonzero > 0)
-      return(structure(list(
-          roots=polyroot(c(1,-parvec[1:last.nonzero])),
-          type="AR"),
-        class='armaroots'))
-  }
-  return(structure(list(roots=numeric(0), type="AR"),
-    class='armaroots'))
-}
-
-# Compute MA roots
-maroots <- function(object)
-{
-  if(!("Arima" %in% class(object)))
-    stop("object must be of class Arima")
-  parvec <- object$model$theta
-  if(length(parvec) > 0)
-  {
-    last.nonzero <- max(which(abs(parvec) > 1e-08))
-    if (last.nonzero > 0)
-      return(structure(list(
-          roots=polyroot(c(1,parvec[1:last.nonzero])),
-          type="MA"),
-        class='armaroots'))
-  }
-  return(structure(list(roots=numeric(0), type="MA"),
-    class='armaroots'))
-}
-
-plot.armaroots <- function(x, xlab="Real", ylab="Imaginary",
-    main=paste("Inverse roots of", x$type,
-          "characteristic polynomial"),
-    ...)
-{
-  oldpar <- par(pty='s')
-  on.exit(par(oldpar))
-  plot(c(-1,1), c(-1,1), xlab=xlab, ylab=ylab,
-       type="n", bty="n", xaxt="n", yaxt="n", main=main, ...)
-  axis(1, at=c(-1,0,1), line=0.5, tck=-0.025)
-  axis(2, at=c(-1,0,1), label=c("-i","0","i"),
-    line=0.5, tck=-0.025)
-  circx <- seq(-1,1,l=501)
-  circy <- sqrt(1-circx^2)
-  lines(c(circx,circx), c(circy,-circy), col='gray')
-  lines(c(-2,2), c(0,0), col='gray')
-  lines(c(0,0), c(-2,2), col='gray')
-  if(length(x$roots) > 0)
-  {
-    inside <- abs(x$roots) > 1
-    points(1/x$roots[inside], pch=19, col='black')
-    if(sum(!inside) > 0)
-      points(1/x$roots[!inside], pch=19, col='red')
-  }
-}
+modelo1superintervencion <- arimax(dftimeserie, order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
+xtransf=data.frame( creemosquepandemia=1 *(seq_along(dftimeserie) == 139)),
+transfer=list(c(1, 0)))
+modelo1superintervencion %>% coeftest()
 ```
 
+Dada esta tabla, se busca entender cual de los coeficientes son o no significativos. 
 
-Inicialmente se desea trabajar con un indice. Proporcion de niñas nacidas vs niños nacidos ; es decir:
+Entonces, como el AR1 NO es significativo; se concluye que la funcion a utilizar es una funcion pulso. Dicho de otra manera (Mas bonita):
 
-Hembra/ macho; queremos ver si es igual, menor y si esto tiene una evolucion en el tiempo.
+El δ1 estimado (0.034201x100.000 =3420.1 ) no es significativo con un nivel de significancia del 5 %. En cambio, el ω1 estimado (-0.692464x100000=-69246.4 ) sí es significativo; lo que implica que la caida dada por pandemia es de cerca de 69246 cabezas de marranos.
 
-```{r warning=FALSE}
-datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
-datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
-datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
+En pocas palabras, la pandemia afectó en promedio la produccion de cabezas porcinas en casi 70 mil unidades menos de lo que se producia normalmente. 
+
+```{r}
+modelo1superintervencion2 <- arimax(dftimeserie, order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
+xtransf=data.frame( creemosquepandemia=1 *(seq_along(dftimeserie) == 139)),
+
+transfer=list(c(0, 0)))
+modelo1superintervencion2 %>% coeftest()
 ```
 
+Finalmente, al analizar los datos realizando la intervencion, se concluye que el modelo es significativo en todos sus parametros entonces; se procede a predecir con dicho modelo intervenido.
 
-```{r warning=FALSE}
-datos <- datos %>%
-  mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>% 
-  group_by(Anio, semana) %>% 
-  summarise(ratio = sum(SEXO != "MASCULINO")/sum(SEXO == "MASCULINO"))
-lambda <- forecast::BoxCox.lambda(datos$ratio)
-datos$ratio <- forecast::BoxCox(datos$ratio, lambda)
+## Prediccion con modelo intervenido. 
 
+Para realizar las predicciones con el modelo intervenido, se ha de revisar los supuestos del modelo. Entonces:
+
+```{r}
+modelo1superintervencion2 %>% checkresiduals()
+```
+
+Al analizar de manera descriptiva, el modelo parece seguir una distribucion normal, la ACF detecta autocorrelacion y, parece que los errores tienen  problemas de autocorrelacion.
+
+Respecto a outliers, se detectan algunos puntos marcados pero no tienen asociados  causas asignables.
+
+Varianza constante (en principio); Por otra parte, se observa que la prueba de correlacion de los residuales de Ljung-Box determina correlacion en los residuales. 
+
+Aun asi, dada las condiciones del modelo se decide *NO* intervenir nuevamente, puesto que se podria sobreajustar. 
+
+*Normalidad residuales:*
+
+```{r}
+modelo1superintervencion2$residuals %>% shapiro.test()
+```
+Note que, aunque asi lo parezca; los errores segun la prueba de shapiro-wilk no son normales. Se procede a analizar el qqplot.
+
+```{r}
+qqnorm(modelo1superintervencion2$residuals)
+qqline(modelo1superintervencion2$residuals)
+```
+
+Note que los residuales tienen en general un buen ajuste a la recta de normalidad. El qqplot tiene algunos datos atipicos. 
+
+## Prediciones con modelo intervenido
+
+Finalmente, se procede a realizar las predicciones con el modelo intervenido.
+
+```{r}
+modelo1superintervencion2
 ```
 
 ```{r}
+delta1 <- 0.034201 
+reg1 <- stats::filter(1 * (seq.int(length(dftimeserie) + 12)== 139),
 
-pacf(datos$ratio)
+filter =0, method = "rec",
+sides = 1)
 ```
-
-Empezamos mal...
 
 ```{r}
-acf(datos$ratio)
-```
+xreg <- cbind(I1=stats::filter(1*(seq_along(dftimeserie) == 139),method = "rec",sides = 1,filter = 0))
 
-Y terminamos pior. Valemos verga.
+```
 
 
 ```{r}
-x = datos$ratio
-plot(x, type = "l")
+modelo_intervenido <-arima(dftimeserie, order = c(3,0, 0),
+seasonal = list(order = c(0,1,2),
+period = 12), xreg = xreg)
 ```
-
-
-Ombe pues bonita si se ve peeero... Y entonces?
 
 ```{r}
-mod <- forecast::auto.arima(datos$ratio)
-summary(mod)
+modelo_intervenido %>% coeftest()
+```
+```{r}
+df2$t_cabezas=df2$t_cabezas
+vectores <- c(df2$t_cabezas)
+dftimeserie <-ts(vectores, frequency = 12, start = c(2008,1))
 ```
 
-Como dijo aquella figura de la tv mexicana; 'Lo sospeché desde un principio'
-
-```{r warning=FALSE}
-library(forecast)
-fit <- mod
-par(mfrow=c(1,2))
-plot(arroots(fit),main="Inverse AR roots")
-plot(maroots(fit),main="Inverse MA roots")
-```
-
-Basicamente vale monda este modelo. No el modelo, el problema
-
-¿Que pasó con las raíces? # Maso, oh tu que todo lo sabes. Iluminad a este pobre mortal, pues la luz de la esperanza se escapa ante cada linea de codigo que escribe.
-
-Hipotesis: La naturaleza del problema no responde a un analisis de series temporales. La proporcion de nacimientos de niños vs niñas no varia en el tiempo; no es un dato temporal. 
-
-Nota para smith del futuro: Basicamente, piense en la teoria antes de perder toda la tarde haciendo estas pendejadas buscando soluciones rebuscadas. KISS
-
-## Niños... Oh, si; niños.
 
 ```{r}
-# Probemos con una bd de conteo de niños. 
-datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
-datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
-datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
-# otra veez, porque soy imbecil
-
-datos.total.kids = datos[order(datos$FECHA.NACIMIENTO),]
-
-datos.total.kids = datos.total.kids %>% mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>%group_by(Anio, semana) %>% 
-  summarise(total.kids = sum(SEXO == 'MASCULINO')+sum(SEXO !='MASCULINO')  )
-
-#Miremos que salió
+reg1 <- ts(reg1, start = start(dftimeserie),
+frequency = frequency(dftimeserie)) # hasta aca se tiene 0 y 1 en la intervencion
 ```
 
-Para esta base de datos, estudiaremos un conjunto de información del sector salud, para dictaminar conclusiones acerca del análisis en cuestión de series temporales que podamos hacer para estos datos, se tomara información del Hospital Manuel Uribe Ángel, el cual está ubicado en el departamento de Antioquia, específicamente en el municipio de envigado; la fecha de emisión de la base de datos fue el 2019-10-08 y esta se actualiza de manera trimestral,  los datos que residen en esta base apuntan hacia la caracterización de los nacimientos que hubo en este hospital desde el 2018, entre los datos hay información como el sexo del niño, el departamento, el municipio, el área de nacimiento, el peso en gramos, la talla de nacimiento, la fecha de nacimiento y demás.
+
+
 ```{r}
-datos %>% head() # Hay muchas variables. 
+reg1_new <- window(reg1, start = c(2022,09), end = c(2023,08))
+
+inter.pred = predict(modelo_intervenido, newxreg=reg1_new, n.ahead=12)
+inter.pred
 ```
 
-Para este enfoque, nos interesamos en hacer conteos de nacimientos por periodos específicos, ya sea separando por machos y hembras o totalizando este conjunto, la temporalidad que elegiremos será mensual para buscar patrones en cuanto a los meses del año y si esto puede brindar algún tipo de información relevante en cuanto al análisis que realizaremos de los nacimientos en el centro hospitalario.
+```{r}
+prediccions = inter.pred$pred # serie de tiempo de la prediccion
+se = inter.pred$se # para crear los IC
+```
 
-*Podriamos dictaminar entonces, algun tipo de estacionaldiad en los datos y nacimientos? ? Les leemos el Tarot con un modelo ARIMA?*
+# Grafica de la prediccion
+
+```{r}
+serie.original = df2$t_cabezas
+prediccions = as.data.frame(prediccions)
+
+```
+
+```{r}
+s1 = df2$t_cabezas # termina en septiembre del 2022
+s2 = prediccions #
+
+a1 = ts(s1, frequency = 12, start = c(2008,10))
+a2 = ts(s2, frequency = 12, start = c(2022,09))
+# graficamos estas dos series
+
+
+
+```
 
 ```{r}
 
-plot(datos.total.kids$total.kids, type = 'l') # se ve mas chimbita
+
 ```
 
-Vemos en la gráfica de la serie que hay periodos donde la serie de tiempo presenta tendencia creciente y que hay ciertos picos y valles, de cierta manera podríamos decir que al final de serie la predominancia es una tendencia bajista, a primera vista no es evidente alguna estacionalidad y se sospecha que la serie por su componente de tendencia necesitara una diferenciación.
 
 ```{r}
-b=auto.arima(datos.total.kids$total.kids) # tiene mas sentido
-b
-```
-Como era de esperarse, la serie requiere una diferenciación, además tiene ordenes p y q de 1 y 2 respectivamente.
-```{r}
-pacf(datos.total.kids$total.kids)
-```
-En el análisis de la autocorrelación parcial de la serie de tiempo, vemos que esta tiene un comportamiento tipo corte de orden 1 ( lo que puede dictaminar el orden autorregresivo de 1).
 
-```{r}
-acf(datos.total.kids$total.kids)
+#Visually evaluate the prediction
+autoplot(a1, series="Datos") + 
+   autolayer(a2, series="Predicciones") +
+   #autolayer(HW2.pred, series="Prediction") +
+   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
-Analizando la acf, vemos que esta tiene un decaimiento lento, que como vimos anteriormente se puede deber a la presencia de tendencia; esto confirma la necesidad de una diferenciación para buscar la estacionariedad en la serie.
+
+
 
 ```{r}
-fit <- b
-par(mfrow=c(1,2))
-plot(arroots(fit),main="Inverse AR roots")
-plot(maroots(fit),main="Inverse MA roots")
+delta1 <- 0.034201 
+reg1 <- stats::filter(1 * (seq.int(length(dftimeserie) + 12)== 139),
+
+filter = delta1, method = "rec",
+sides = 1)
 ```
 
-remember: (And as a consequence, the solution of a homogeneous autoregressive difference equation is stable if all roots of its characteristic polynomials are inside the unit circle, or equivalently, the roots of its inverse characteristic polynomial are outside of the unit circle.)
+```{r}
+plot(reg1, type="h")
+```
+
+## Back-Testing
+
+Para modelar correctamente, se utilza back-testing; aqui se divide en datos de entrenamiento y prueba.
+
+```{r}
+
+train <- window(dftimeserie, start=time(dftimeserie)[1],
+                end = time(dftimeserie)[length(dftimeserie) - 12])
+
+test <- window(dftimeserie, start = time(dftimeserie)[length(dftimeserie)
+- 12 + 1],
+end = time(dftimeserie)[length(dftimeserie)])
+
+```
 
 
-Según la prueba de las raíces unitarias y analizando sus inversos para poder hacer una gráfica ilustrativa como se ve en la propuesta anterior, vemos que este modelo es estacionario e invertible, lo cual nos indica que el modelo tiene validez y que podemos proseguir con los análisis pertinentes.
 
-
-#

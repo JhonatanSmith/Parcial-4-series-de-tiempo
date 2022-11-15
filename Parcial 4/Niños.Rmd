@@ -1,0 +1,217 @@
+---
+title: "Niños"
+author: "Jhonatan Smith Garcia"
+date: "2022-11-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+# Base de datos nacimientos hospital 
+
+```{r}
+
+# fn para calcular las raices unitarias y graficas bien chimbita
+arroots <- function(object)
+{
+  if(!("Arima" %in% class(object)) &
+     !("ar" %in% class(object)))
+    stop("object must be of class Arima or ar")
+  if("Arima" %in% class(object))
+    parvec <- object$model$phi
+  else
+    parvec <- object$ar
+  if(length(parvec) > 0)
+  {
+    last.nonzero <- max(which(abs(parvec) > 1e-08))
+    if (last.nonzero > 0)
+      return(structure(list(
+          roots=polyroot(c(1,-parvec[1:last.nonzero])),
+          type="AR"),
+        class='armaroots'))
+  }
+  return(structure(list(roots=numeric(0), type="AR"),
+    class='armaroots'))
+}
+
+# Compute MA roots
+maroots <- function(object)
+{
+  if(!("Arima" %in% class(object)))
+    stop("object must be of class Arima")
+  parvec <- object$model$theta
+  if(length(parvec) > 0)
+  {
+    last.nonzero <- max(which(abs(parvec) > 1e-08))
+    if (last.nonzero > 0)
+      return(structure(list(
+          roots=polyroot(c(1,parvec[1:last.nonzero])),
+          type="MA"),
+        class='armaroots'))
+  }
+  return(structure(list(roots=numeric(0), type="MA"),
+    class='armaroots'))
+}
+
+plot.armaroots <- function(x, xlab="Real", ylab="Imaginary",
+    main=paste("Inverse roots of", x$type,
+          "characteristic polynomial"),
+    ...)
+{
+  oldpar <- par(pty='s')
+  on.exit(par(oldpar))
+  plot(c(-1,1), c(-1,1), xlab=xlab, ylab=ylab,
+       type="n", bty="n", xaxt="n", yaxt="n", main=main, ...)
+  axis(1, at=c(-1,0,1), line=0.5, tck=-0.025)
+  axis(2, at=c(-1,0,1), label=c("-i","0","i"),
+    line=0.5, tck=-0.025)
+  circx <- seq(-1,1,l=501)
+  circy <- sqrt(1-circx^2)
+  lines(c(circx,circx), c(circy,-circy), col='gray')
+  lines(c(-2,2), c(0,0), col='gray')
+  lines(c(0,0), c(-2,2), col='gray')
+  if(length(x$roots) > 0)
+  {
+    inside <- abs(x$roots) > 1
+    points(1/x$roots[inside], pch=19, col='black')
+    if(sum(!inside) > 0)
+      points(1/x$roots[!inside], pch=19, col='red')
+  }
+}
+```
+
+
+Inicialmente se desea trabajar con un indice. Proporcion de niñas nacidas vs niños nacidos ; es decir:
+
+Hembra/ macho; queremos ver si es igual, menor y si esto tiene una evolucion en el tiempo.
+
+```{r warning=FALSE}
+datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
+datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
+datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
+```
+
+
+```{r warning=FALSE}
+datos <- datos %>%
+  mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>% 
+  group_by(Anio, semana) %>% 
+  summarise(ratio = sum(SEXO != "MASCULINO")/sum(SEXO == "MASCULINO"))
+lambda <- forecast::BoxCox.lambda(datos$ratio)
+datos$ratio <- forecast::BoxCox(datos$ratio, lambda)
+
+```
+
+```{r}
+
+pacf(datos$ratio)
+```
+
+Empezamos mal...
+
+```{r}
+acf(datos$ratio)
+```
+
+Y terminamos pior. Valemos verga.
+
+
+```{r}
+x = datos$ratio
+plot(x, type = "l")
+```
+
+
+Ombe pues bonita si se ve peeero... Y entonces?
+
+```{r}
+mod <- forecast::auto.arima(datos$ratio)
+summary(mod)
+```
+
+Como dijo aquella figura de la tv mexicana; 'Lo sospeché desde un principio'
+
+```{r warning=FALSE}
+library(forecast)
+fit <- mod
+par(mfrow=c(1,2))
+plot(arroots(fit),main="Inverse AR roots")
+plot(maroots(fit),main="Inverse MA roots")
+```
+
+Basicamente vale monda este modelo. No el modelo, el problema
+
+¿Que pasó con las raíces? # Maso, oh tu que todo lo sabes. Iluminad a este pobre mortal, pues la luz de la esperanza se escapa ante cada linea de codigo que escribe.
+
+Hipotesis: La naturaleza del problema no responde a un analisis de series temporales. La proporcion de nacimientos de niños vs niñas no varia en el tiempo; no es un dato temporal. 
+
+Nota para smith del futuro: Basicamente, piense en la teoria antes de perder toda la tarde haciendo estas pendejadas buscando soluciones rebuscadas. KISS
+
+## Niños... Oh, si; niños.
+
+```{r}
+# Probemos con una bd de conteo de niños. 
+datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
+datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
+datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
+# otra veez, porque soy imbecil
+
+datos.total.kids = datos[order(datos$FECHA.NACIMIENTO),]
+
+datos.total.kids = datos.total.kids %>% mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>%group_by(Anio, semana) %>% 
+  summarise(total.kids = sum(SEXO == 'MASCULINO')+sum(SEXO !='MASCULINO')  )
+
+#Miremos que salió
+```
+
+Para esta base de datos, estudiaremos un conjunto de información del sector salud, para dictaminar conclusiones acerca del análisis en cuestión de series temporales que podamos hacer para estos datos, se tomara información del Hospital Manuel Uribe Ángel, el cual está ubicado en el departamento de Antioquia, específicamente en el municipio de envigado; la fecha de emisión de la base de datos fue el 2019-10-08 y esta se actualiza de manera trimestral,  los datos que residen en esta base apuntan hacia la caracterización de los nacimientos que hubo en este hospital desde el 2018, entre los datos hay información como el sexo del niño, el departamento, el municipio, el área de nacimiento, el peso en gramos, la talla de nacimiento, la fecha de nacimiento y demás.
+```{r}
+datos %>% head() # Hay muchas variables. 
+```
+
+Para este enfoque, nos interesamos en hacer conteos de nacimientos por periodos específicos, ya sea separando por machos y hembras o totalizando este conjunto, la temporalidad que elegiremos será mensual para buscar patrones en cuanto a los meses del año y si esto puede brindar algún tipo de información relevante en cuanto al análisis que realizaremos de los nacimientos en el centro hospitalario.
+
+*Podriamos dictaminar entonces, algun tipo de estacionaldiad en los datos y nacimientos? ? Les leemos el Tarot con un modelo ARIMA?*
+
+```{r}
+
+plot(datos.total.kids$total.kids, type = 'l') # se ve mas chimbita
+```
+
+Vemos en la gráfica de la serie que hay periodos donde la serie de tiempo presenta tendencia creciente y que hay ciertos picos y valles, de cierta manera podríamos decir que al final de serie la predominancia es una tendencia bajista, a primera vista no es evidente alguna estacionalidad y se sospecha que la serie por su componente de tendencia necesitara una diferenciación.
+
+```{r}
+b=auto.arima(datos.total.kids$total.kids) # tiene mas sentido
+b
+```
+Como era de esperarse, la serie requiere una diferenciación, además tiene ordenes p y q de 1 y 2 respectivamente.
+```{r}
+pacf(datos.total.kids$total.kids)
+```
+En el análisis de la autocorrelación parcial de la serie de tiempo, vemos que esta tiene un comportamiento tipo corte de orden 1 ( lo que puede dictaminar el orden autorregresivo de 1).
+
+```{r}
+acf(datos.total.kids$total.kids)
+```
+Analizando la acf, vemos que esta tiene un decaimiento lento, que como vimos anteriormente se puede deber a la presencia de tendencia; esto confirma la necesidad de una diferenciación para buscar la estacionariedad en la serie.
+
+```{r}
+fit <- b
+par(mfrow=c(1,2))
+plot(arroots(fit),main="Inverse AR roots")
+plot(maroots(fit),main="Inverse MA roots")
+```
+
+remember: (And as a consequence, the solution of a homogeneous autoregressive difference equation is stable if all roots of its characteristic polynomials are inside the unit circle, or equivalently, the roots of its inverse characteristic polynomial are outside of the unit circle.)
+
+
+Según la prueba de las raíces unitarias y analizando sus inversos para poder hacer una gráfica ilustrativa como se ve en la propuesta anterior, vemos que este modelo es estacionario e invertible, lo cual nos indica que el modelo tiene validez y que podemos proseguir con los análisis pertinentes.
+
+
+#
