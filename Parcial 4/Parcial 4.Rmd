@@ -34,9 +34,139 @@ require(janitor)
 ```
 
 
+# Base de datos nacimientos hospital 
+
+```{r include=FALSE}
+
+# fn para calcular las raices unitarias y graficas bien chimbita
+arroots <- function(object)
+{
+  if(!("Arima" %in% class(object)) &
+     !("ar" %in% class(object)))
+    stop("object must be of class Arima or ar")
+  if("Arima" %in% class(object))
+    parvec <- object$model$phi
+  else
+    parvec <- object$ar
+  if(length(parvec) > 0)
+  {
+    last.nonzero <- max(which(abs(parvec) > 1e-08))
+    if (last.nonzero > 0)
+      return(structure(list(
+          roots=polyroot(c(1,-parvec[1:last.nonzero])),
+          type="AR"),
+        class='armaroots'))
+  }
+  return(structure(list(roots=numeric(0), type="AR"),
+    class='armaroots'))
+}
+
+# Compute MA roots
+maroots <- function(object)
+{
+  if(!("Arima" %in% class(object)))
+    stop("object must be of class Arima")
+  parvec <- object$model$theta
+  if(length(parvec) > 0)
+  {
+    last.nonzero <- max(which(abs(parvec) > 1e-08))
+    if (last.nonzero > 0)
+      return(structure(list(
+          roots=polyroot(c(1,parvec[1:last.nonzero])),
+          type="MA"),
+        class='armaroots'))
+  }
+  return(structure(list(roots=numeric(0), type="MA"),
+    class='armaroots'))
+}
+
+plot.armaroots <- function(x, xlab="Real", ylab="Imaginary",
+    main=paste("Inverse roots of", x$type,
+          "characteristic polynomial"),
+    ...)
+{
+  oldpar <- par(pty='s')
+  on.exit(par(oldpar))
+  plot(c(-1,1), c(-1,1), xlab=xlab, ylab=ylab,
+       type="n", bty="n", xaxt="n", yaxt="n", main=main, ...)
+  axis(1, at=c(-1,0,1), line=0.5, tck=-0.025)
+  axis(2, at=c(-1,0,1), label=c("-i","0","i"),
+    line=0.5, tck=-0.025)
+  circx <- seq(-1,1,l=501)
+  circy <- sqrt(1-circx^2)
+  lines(c(circx,circx), c(circy,-circy), col='gray')
+  lines(c(-2,2), c(0,0), col='gray')
+  lines(c(0,0), c(-2,2), col='gray')
+  if(length(x$roots) > 0)
+  {
+    inside <- abs(x$roots) > 1
+    points(1/x$roots[inside], pch=19, col='black')
+    if(sum(!inside) > 0)
+      points(1/x$roots[!inside], pch=19, col='red')
+  }
+}
+```
+
+Inicialmente se desea trabajar con un indice. Proporcion de niñas nacidas vs niños nacidos ; es decir:
+
+Hembra/ macho; queremos ver si es igual, menor y si esto tiene una evolucion en el tiempo.
+
+```{r warning=FALSE}
+datos <- read.csv("Nacidos_Vivos_en_Hospital_Manuel_Uribe_Angel.csv")
+datos$FECHA.NACIMIENTO <- gsub(" \\d+:\\d+:\\d+ .*", "", datos$FECHA.NACIMIENTO)
+datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
+datos <- datos %>%  mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>% 
+  group_by(Anio, semana) %>% 
+  summarise(ratio = sum(SEXO != "MASCULINO")/sum(SEXO == "MASCULINO"))
+lambda <- forecast::BoxCox.lambda(datos$ratio)
+datos$ratio <- forecast::BoxCox(datos$ratio, lambda)
+
+pacf(datos$ratio)
+```
+
+Empezamos mal...
+
+```{r}
+acf(datos$ratio)
+```
+
+Y terminamos pior. 
+
+
+```{r}
+x = datos$ratio
+plot(x, type = "l")
+```
+
+
+Ombe pues bonita si se ve peeero... Y entonces?
+
+```{r}
+mod <- forecast::auto.arima(datos$ratio)
+summary(mod)
+```
+
+Como dijo aquella figura de la tv mexicana; 'Lo sospeché desde un principio'
+
+```{r warning=FALSE}
+fit <- mod
+par(mfrow=c(1,2))
+plot(arroots(fit),main="Inverse AR roots")
+plot(maroots(fit),main="Inverse MA roots")
+```
+
+Basicamente vale monda este modelo. No el modelo, el problema
+
+¿Que pasó con las raíces? # Maso, oh tu que todo lo sabes. Iluminad a este pobre mortal, pues la luz de la esperanza se escapa ante cada linea de codigo que escribe.
+
+Hipotesis: La naturaleza del problema no responde a un analisis de series temporales. La proporcion de nacimientos de niños vs niñas no varia en el tiempo; no es un dato temporal. 
+
+Nota para smith del futuro: Basicamente, piense en la teoria antes de perder toda la tarde haciendo estas pendejadas buscando soluciones rebuscadas. KISS
 # Base de datos cerditos (Yopal)
 
 ## Marco teorico: ¿Por qué los cerditos?
+
+![Un lindo cerdito](C:/Users\jhsga\OneDrive\Escritorio\ODINSA\Parcial-4-series-de-tiempo\Parcial 4\tierno.jpg)
 
 Tenga presente que el analisis del consumo carnico para una poblacion es importante pueto que a las entidades gubernamentales le permite controlar y entender dicho comportamiento para identificar y preveer posibles problemas de salud publica o en su defecto, generar politicas para controlar la economia 
 del consumo. Se entiende pues, que un analisis para con el consumo es de vital importancia para los analisis demograficos de una poblacion. 
@@ -44,6 +174,11 @@ del consumo. Se entiende pues, que un analisis para con el consumo es de vital i
 Tambien, tener un control total sobre la cantidad de cerdos sacrificados, ayuda a las entidades sanitarias a mantener un estandar en dicha produccion. Si esto no es regulado, se pueden propagar enfermedadas por la mala praxis en la industria. 
 
 En el presente analisis, se desea predecir el numero total de cabezas porcinas sacrificadas. 
+
+# PERO AUN MAS IMPORTANTE:
+
+![Una chuleta](C:/Users\jhsga\OneDrive\Escritorio\ODINSA\Parcial-4-series-de-tiempo\Parcial 4\chuleta.jpg)
+El factor economico. Y sabrozo del asunto. 
 
 ## Procesamiento de la base de datos
 
@@ -330,6 +465,13 @@ mod1 = auto.arima(df2$t_cabezas, stepwise = F, approximation = F, seasonal = T,)
 checkresiduals(mod1)
 ```
 
+```{r}
+par(mfrow=c(1,2))
+plot(arroots(mod1),main="Inverse AR roots")
+plot(maroots(mod1),main="Inverse MA roots")
+```
+
+
 La ACF de los residuales muestra correlacion en lag 12. Parece haber normalidad y a priori no se idenfitican datos atipicos. Ahora, tambien se aclara que la respectiva prueba de Ljung-Box rechaza no autocorrelacion. 
 
 ```{r}
@@ -429,7 +571,11 @@ prueba = Arima(dftimeserie, order = c(1,0,1),
                seasonal = list(order = c(0,1,0),period =12))
 checkresiduals(prueba)
 ```
-
+```{r}
+par(mfrow=c(1,2))
+plot(arroots(prueba),main="Inverse AR roots")
+plot(maroots(prueba),main="Inverse MA roots")
+```
 Ahora, dicho modelo posee problemas en sus supuestos. Tiene correlacion en sus residuales y problemas de normalidad. 
 
 ```{r}
@@ -532,6 +678,146 @@ model_comp %>% kableExtra::kable()
 ```
 
 En general, los modelos que tienen mejor rendimiento son los HW 1 y 2. Se ha de escoger uno de ellos para modelar. Sin embargo, se deben realizar pruebas de backtesing para comparar. No necesariamente la tecnica es aplicable a todos los modelos pero, ¿por qué no probar?
+
+## Back-Testing
+
+Para modelar correctamente, se utilza back-testing; aqui se divide en datos de entrenamiento y prueba.
+Se trabajara con el 80% de los datos. Asi pues:
+
+```{r}
+
+df3 = df2[,1:2] # serie con la que se trabajará
+n = df3$t_cabezas %>% length() # 168 observaciones
+split = (n*0.8) %>% round() # se toman 134 datos
+indice = df3[split,] # Fecha dividida hasta el 2019
+
+# Division datos de entrenamiento
+train = df3[1:split,] #134 datos
+
+# Division datos de prueba
+test = df3[(split+1):nrow(df3),] # 34 datos
+
+
+```
+
+## Grafica datos entrenamiento y prueba:
+
+```{r}
+serie.original = df2$t_cabezas
+#prediccions = as.data.frame(prediccions)
+s1 = train$t_cabezas # termina en septiembre del 2022 DATOS DE ENTRENAMIENTO
+s2 = test$t_cabezas #
+
+a1 = ts(s1, frequency = 12, start = c(2008,10))# ENTRENAMIENTO
+a2 = ts(s2, frequency = 12, start = end(a1)) # PRUEBA
+
+#Visually evaluate the prediction
+autoplot(a1, series="Datos entrenamiento") + 
+   autolayer(a2, series="Datos de prueba") +
+   #autolayer(HW2.pred, series="Prediction") +
+   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
+```
+
+Con la base de datos dividida, se procede a analizar el ajuste de los modelos via Back-Testing.
+
+## Modelos con Back-Testing
+
+Todos los modelos utilizados en la serie anterior, se utilizan para predecir ahora; evaluarlos via back-Testing. 
+
+```{r echo=FALSE}
+mod1 = auto.arima(s1, stepwise = F, approximation = F, seasonal = T,) # ARIMA(0,1,5)
+mod2 = Arima(s1, order = c(1,0,1),
+               seasonal = list(order = c(0,1,0),period =12)) # SARIMA (1,0,1)x(0,1,0)
+mod3 <- hw(ts(train$t_cabezas, frequency = 12, start = c(2008,10)), alpha=0.2, beta=0.1, gamma=0.1,h = 34)
+mod4 <- hw(ts(train$t_cabezas, frequency = 12, start = c(2008,10)),  optim.start = c(alpha = 0, beta = 0, gamma = 0), h=34)
+```
+Para calcular el modelo con mejor rendimiento, se procede a calcular el MSE asociado a cada modelo. De esta manera:
+
+```{r}
+# PREGUNTAR SI ES ASI
+y = test$t_cabezas # valor de y_test; reales
+
+a1 = forecast(mod1,h = 34) # prediccion modelo 1
+y_hat1 = a1$mean
+
+a2 = forecast(mod2,h=34)  # prediccion modelo 2
+y_hat2 = a2$mean
+
+a3 = mod3  # prediccion modelo 3 
+y_hat3 = a3$mean
+
+a4 <- mod4 # prediccion modelo 4
+y_hat4 <- a4$mean
+```
+
+```{r}
+mse1 = mean((y-y_hat1))^2
+mse2 = mean((y-y_hat2))^2
+mse3 = mean((y-y_hat3))^2
+mse4 = mean((y-y_hat4))^2
+```
+
+
+```{r echo=FALSE}
+tabla = cbind(c(mse1,mse2,mse3,mse4))
+colnames(tabla) = c("MSE")
+rownames(tabla) = c("Modelo 1","Modelo 2","Modelo 3","Modelo 4")
+tabla %>% kable
+```
+
+De esta manera, entonces; el modelo optimo será el que tenga un menor MSE. El modelo con mejor rendimiendo es el modelo 4, que respectivamente corresponde al modelo con menor MSE. 
+
+Se adjuntan las siguientes metricas para la seleccion ideal del modelo.
+
+```{r}
+model_comp <- data.frame(accuracy(mod1)[1:6],
+                         accuracy(mod2)[1:6],
+                        accuracy(mod3)[1:6],
+                        accuracy(mod4)[1:6],
+                         row.names = c("ME", "RMSE",
+                                       "MAE", "MPE",
+                                       "MAPE","MASE"))
+colnames(model_comp) <- c('Modelo 1','Modelo 2','Modelo 3','Modelo 4')
+
+model_comp %>% kableExtra::kable() 
+```
+Segunla anterior tabla, el modelo con mejor rendimiento es el modelo 4. Se muestra acontinuacion.
+
+```{r}
+mod4$model
+```
+
+Este es un modelo Holt-Winters con los parametros anteriores.Ahora, como este modelo no tiene supuestos de normalidad en los residuales...
+Pues bastaria lanzar una prediccion. 
+
+```{r}
+# prediccion HW
+
+f_fit <- y_hat4
+
+autoplot(dftimeserie, series="Datos") + 
+   autolayer(mod4$fitted, series="Modelo HW fitted ") +
+   autolayer(f_fit, series="Prediction") +
+   #autolayer()+
+   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
+
+```
+
+En el grafico anterior, se tiene los datos en rojo, los ajustados por el modelo HW en verde u finalmente la prediccion para los datos de prueba. No se grafica el IC dado que puede ser caotico para visualizar. Ahora, dicho grafico seria:
+
+```{r}
+f_fit <- forecast(mod4,h=34)
+autoplot(dftimeserie, series="Datos") + 
+   #autolayer(mod4$fitted, series="Modelo HW fitted ") +
+   autolayer(f_fit, series="Prediction") +
+   #autolayer()+
+   xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
+
+```
+
+Ahora, acá se tienen los datos reales en rojo y solo la prediccion. Note como el modelo tiene peor rendimiento que cuando se ajusta con la totalidad de la base de datos. Sin embargo, el ajuste de la serie predicha por el modelo no es necesariamente malo. AHora, recuerde que entre mas predicciones en el tiempo se hagan, mas imprecisa es la prediccion. 
+
+
 
 ## Analisis de outliers
 
@@ -672,12 +958,12 @@ Aun asi, dada las condiciones del modelo se decide *NO* intervenir nuevamente, p
 
 *Normalidad residuales:*
 
-```{r}
+```{r echo=FALSE}
 modelo1superintervencion2$residuals %>% shapiro.test()
 ```
 Note que, aunque asi lo parezca; los errores segun la prueba de shapiro-wilk no son normales. Se procede a analizar el qqplot.
 
-```{r}
+```{r echo=FALSE}
 qqnorm(modelo1superintervencion2$residuals)
 qqline(modelo1superintervencion2$residuals)
 ```
@@ -688,25 +974,20 @@ Note que los residuales tienen en general un buen ajuste a la recta de normalida
 
 Finalmente, se procede a realizar las predicciones con el modelo intervenido.
 
-```{r}
+A continuacion se muestra el modelo intervenido.
+
+```{r echo=FALSE}
 modelo1superintervencion2
 ```
 
 ```{r}
-delta1 <- 0.034201 
+
 reg1 <- stats::filter(1 * (seq.int(length(dftimeserie) + 12)== 139),
 
 filter =0, method = "rec",
 sides = 1)
-```
-
-```{r}
 xreg <- cbind(I1=stats::filter(1*(seq_along(dftimeserie) == 139),method = "rec",sides = 1,filter = 0))
 
-```
-
-
-```{r}
 modelo_intervenido <-arima(dftimeserie, order = c(3,0, 0),
 seasonal = list(order = c(0,1,2),
 period = 12), xreg = xreg)
@@ -715,25 +996,18 @@ period = 12), xreg = xreg)
 ```{r}
 modelo_intervenido %>% coeftest()
 ```
-```{r}
+Note que para cada parametro del modelo, se tiene que son significativos.
+
+```{r message=FALSE, warning=FALSE}
 df2$t_cabezas=df2$t_cabezas
 vectores <- c(df2$t_cabezas)
-dftimeserie <-ts(vectores, frequency = 12, start = c(2008,1))
-```
-
-
-```{r}
+dftimeserie <-ts(vectores, frequency = 12, start = c(2008,10))
 reg1 <- ts(reg1, start = start(dftimeserie),
 frequency = frequency(dftimeserie)) # hasta aca se tiene 0 y 1 en la intervencion
-```
-
-
-
-```{r}
 reg1_new <- window(reg1, start = c(2022,09), end = c(2023,08))
 
 inter.pred = predict(modelo_intervenido, newxreg=reg1_new, n.ahead=12)
-inter.pred
+inter.pred # Estas son las predicciones
 ```
 
 ```{r}
@@ -741,33 +1015,23 @@ prediccions = inter.pred$pred # serie de tiempo de la prediccion
 se = inter.pred$se # para crear los IC
 ```
 
+```{r}
+MSE = mean((df2$t_cabezas- fitted.values(modelo_intervenido)))^2
+MSE
+```
+El MSE de este modelo es del orden de 0.000007387; Hasta el momento, ningun modelo ha ajustado un MSE tan pequeño.
+De esta manera, este modelo con intervenciones; parece el modelo mas confiable para realizar predicciones.
+
 # Grafica de la prediccion
 
 ```{r}
 serie.original = df2$t_cabezas
 prediccions = as.data.frame(prediccions)
-
-```
-
-```{r}
 s1 = df2$t_cabezas # termina en septiembre del 2022
 s2 = prediccions #
 
 a1 = ts(s1, frequency = 12, start = c(2008,10))
 a2 = ts(s2, frequency = 12, start = c(2022,09))
-# graficamos estas dos series
-
-
-
-```
-
-```{r}
-
-
-```
-
-
-```{r}
 
 #Visually evaluate the prediction
 autoplot(a1, series="Datos") + 
@@ -776,34 +1040,6 @@ autoplot(a1, series="Datos") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
 
-
-
-```{r}
-delta1 <- 0.034201 
-reg1 <- stats::filter(1 * (seq.int(length(dftimeserie) + 12)== 139),
-
-filter = delta1, method = "rec",
-sides = 1)
-```
-
-```{r}
-plot(reg1, type="h")
-```
-
-## Back-Testing
-
-Para modelar correctamente, se utilza back-testing; aqui se divide en datos de entrenamiento y prueba.
-
-```{r}
-
-train <- window(dftimeserie, start=time(dftimeserie)[1],
-                end = time(dftimeserie)[length(dftimeserie) - 12])
-
-test <- window(dftimeserie, start = time(dftimeserie)[length(dftimeserie)
-- 12 + 1],
-end = time(dftimeserie)[length(dftimeserie)])
-
-```
-
+Finalmente, se tienen las predicciones con su respectivo IC.
 
 

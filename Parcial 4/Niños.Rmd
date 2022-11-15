@@ -9,8 +9,32 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r message=FALSE, warning=FALSE, include=FALSE}
+require(dplyr)
+require(lmtest)
+require(tseries)
+require(TSA)
+require(astsa)
+require(tsoutliers)
+require(kableExtra)
+require(tidyverse)
+require(ggplot2)
+require(hrbrthemes)
+require(tsoutliers)
+require(TSstudio)
+require(forecast)
+require(latticeExtra)
+require(datetime)
+library(lubridate)
+require(forecast)
+library(readxl)
+require(forecast)
+require(readr)
+require(janitor)
+```
 
 
+![Un lindo cerdito](C:/Users\jhsga\OneDrive\Escritorio\ODINSA\Parcial-4-series-de-tiempo\Parcial 4\tierno.jpg)
 
 
 # Base de datos nacimientos hospital 
@@ -99,8 +123,7 @@ datos$FECHA.NACIMIENTO <- as.Date(datos$FECHA.NACIMIENTO, format = "%m/%d/%Y")
 
 
 ```{r warning=FALSE}
-datos <- datos %>%
-  mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>% 
+datos <- datos %>%  mutate(Anio = year(FECHA.NACIMIENTO), semana = week(FECHA.NACIMIENTO)) %>% 
   group_by(Anio, semana) %>% 
   summarise(ratio = sum(SEXO != "MASCULINO")/sum(SEXO == "MASCULINO"))
 lambda <- forecast::BoxCox.lambda(datos$ratio)
