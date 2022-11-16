@@ -636,11 +636,11 @@ f_fit %>% kable()
 Finalmente, con el arima que arroja la funcion auto.arima -ARIMA(3,0,0)(0,1,2)[12]-; se procede a predecir finalmente los valores asociados a el siguiente año. La prediccion seria tal que:
 
 ```{r echo=FALSE}
-modelo.final = Arima(dftimeserie, order = c(3,0,0),seasonal = c(0,1,2))
+modelo.final = Arima(ts(df2$t_cabezas, frequency = 12, start =c(2008,10)), order = c(3,0,0),seasonal = c(0,1,2))
 
 f_fit <- forecast(modelo.final,h=12)
 
-autoplot(ts(df2$t_cabezas, frequency = 12), series="Datos") + 
+autoplot(ts(df2$t_cabezas, frequency = 12, start = c(2008,10)), series="Datos") + 
    autolayer(modelo.final$fitted, series="Modelo auto.arima fitted ") +
    autolayer(f_fit, series="Prediction (Test)") +
    #autolayer()+
@@ -746,7 +746,7 @@ Respecto a outliers, se detectan algunos puntos marcados, pero no tienen asociad
 
 Varianza constante (en principio); Por otra parte, se observa que la prueba de correlación de los residuales de Ljung-Box determina correlación en los residuales. 
 
-Aun así, dada las condiciones del modelo se decide *NO* intervenir nuevamente, puesto que se podría sobre ajustar. 
+Aun así, dada las condiciones del modelo se decide *NO* intervenir nuevamente (por ahora), puesto que se podría sobre ajustar. 
 
 *Normalidad residuales: *
 
@@ -754,22 +754,155 @@ Aun así, dada las condiciones del modelo se decide *NO* intervenir nuevamente, 
 ```{r echo=FALSE}
 modelo1superintervencion2$residuals %>% shapiro.test()
 ```
+
 Note que, aunque así lo parezca; los errores según la prueba de Shapiro-Wilk no son normales. Se procede a analizar el QQ-plot.
+
 ```{r echo=FALSE}
 qqnorm(modelo1superintervencion2$residuals)
 qqline(modelo1superintervencion2$residuals)
 ```
 
 Note que los residuales tienen en general un buen ajuste a la recta de normalidad. El QQ-plot tiene algunos datos atípicos. 
+Miremos si mejora cuando se transforman los datos. 
+
+```{r}
+modelo1superintervencion3 <- arimax(dftimeserie %>% log(), order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
+xtransf=data.frame( creemosquepandemia=1 *(seq_along(dftimeserie) == 139)),
+
+transfer=list(c(0, 0)))
+modelo1superintervencion3 %>% coeftest()
+```
+
+Sigue habiendo significancia en los parametros.
+
+```{r echo=FALSE}
+qqnorm(modelo1superintervencion3$residuals)
+qqline(modelo1superintervencion3$residuals)
+```
+
+
+```{r echo=FALSE}
+modelo1superintervencion3$residuals %>% shapiro.test()
+```
+Hay sospechas que transformando los datos, el ajuste del modelo podria ser mejor. Ahora...
+
+¿Seguir interviniendo? Calculemos los RMSE y MSE de estos modelos mas adelante para luego, inputarlos en una tabla.
+
+## Intervenir, ¿Otra vez?
+
+Intervenir o no intervenir, he ahi el dilema. 
+
+Otra intervencion, sin logartimos. 
+
+```{r echo=FALSE}
+ultimoModelo<- arimax(dftimeserie, order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
+                      xtransf=data.frame(
+                      dato103=1 * (seq_along(dftimeserie) == 103),
+                      creemosquepandemia=1 *(seq_along(dftimeserie) == 139),
+                      dato103=1 * (seq_along(seq_along(dftimeserie) == 150))),
+                      transfer=list(c(0, 0), c(0, 0),c(0,0)))
+ultimoModelo %>% coeftest()
+```
+
+```{r}
+ultimoModelo %>% checkresiduals()
+
+qqnorm(ultimoModelo$residuals)
+qqline(ultimoModelo$residuals)
+```
+
+```{r}
+shapiro.test(ultimoModelo$residuals)
+```
+
+```{r}
+
+mse = mean( ( df2$t_cabezas- ultimoModelo %>% fitted.values()  )^2 )
+mse
+```
+¿Y si sacamos logaritmo?
+
+
+```{r echo=FALSE}
+mod.final.log<- arimax(dftimeserie %>% log(), order=c(3, 0, 0),seasonal = list(order = c(0, 1, 2)),
+                      xtransf=data.frame(
+                      dato103=1 * (seq_along(dftimeserie) == 103),
+                      creemosquepandemia=1 *(seq_along(dftimeserie) == 139),
+                      dato103=1 * (seq_along(seq_along(dftimeserie) == 150))),
+                      transfer=list(c(0, 0), c(0, 0),c(0,0)))
+mod.final.log %>% coeftest()
+```
+
+
+```{r}
+mod.final.log$residuals %>% shapiro.test()
+```
+
+```{r}
+qqnorm(mod.final.log$residuals)
+qqline(mod.final.log$residuals)
+```
+
+Y el MSE de este modelo final? 
+Es este  mejor que los demas?
+
+
+```{r}
+
+#MSE modelo de logaritmo de varios intervencion con log
+y.hat=mod.final.log %>% fitted.values() 
+y= dftimeserie %>% log()
+mse.modelo.final.log = mean((y-y.hat)^2)
+
+rmse.modelo.final.log=.modelo.final.log = mse %>% sqrt
+a = cbind(mse.modelo.final.log,rmse.modelo.final.log)
+
+# MSE ultimo modelo, varias intervencions sin log
+
+mse = mean( ( df2$t_cabezas- ultimoModelo %>% fitted.values()  )^2 )
+mse.intervenciones = mse
+rmse.intervenciones = mse.intervenciones %>% sqrt
+
+b = c(mse.intervenciones, rmse.intervenciones)
+
+# MSE una sola intervencion logaritmo
+
+y_hat.log = modelo1superintervencion3 %>% fitted.values()
+y = dftimeserie %>% log()
+mse.log = mean((y-y_hat.log)^2)
+rmse.log = mse %>% sqrt()
+
+c =c(mse.log, rmse.log)
+
+# MSE una sola intervencion sin transformacion
+y_hat = modelo1superintervencion2 %>% fitted.values()
+y = dftimeserie
+mse.una.inter = mean((y_hat-y)^2)
+rmse.una.inter = mse.una.inter %>% sqrt()
+
+
+
+d = c(mse.una.inter, rmse.una.inter)
+
+mses = c(mse.una.inter,mse.log,mse.intervenciones,mse.modelo.final.log)
+rmses = c(rmse.una.inter,rmse.log,rmse.intervenciones,rmse.modelo.final.log)
+tabla = cbind(mses,rmses)
+colnames(tabla) = c('MSE', 'RMSE')
+rownames(tabla) = c('Modelo 1 intervencion','Mod 1 intervencion (log)','Modelo intervenciones', 'Modelo Intervenciones (log)')
+tabla %>% kable
+modelo1superintervencion2 = mod.final.log
+```
+Note que, aunque el modelo con mas intervenciones ahora cumple el supueso de normalidad, tiene un menor rmse. Por tal motivo, se decide utilizar el modelo con una unica intervencion. 
 
 ## Predicciones con modelo intervenido
 
-Finalmente, se procede a realizar las predicciones con el modelo intervenido.
+Finalmente, se procede a realizar las predicciones con el modelo intervenido. 
+A pesar de que se pierde interpretabilidad, bueno; vamos a predecir con el escala logaritmica. 
 
 A continuación se muestra el modelo intervenido.
 
 ```{r echo=FALSE}
-modelo1superintervencion2
+modelo1superintervencion2 
 ```
 
 ```{r}
@@ -788,6 +921,7 @@ period = 12), xreg = xreg)
 ```{r}
 modelo_intervenido %>% coeftest()
 ```
+
 Note que para cada parametro del modelo, se tiene que son significativos.
 
 ```{r message=FALSE, warning=FALSE}
@@ -802,17 +936,19 @@ inter.pred = predict(modelo_intervenido, newxreg=reg1_new, n.ahead=12)
 inter.pred # Estas son las predicciones
 ```
 
-```{r}
+```{r echo=FALSE}
+
+
 prediccions = inter.pred$pred # serie de tiempo de la prediccion
 se = inter.pred$se # para crear los IC
+uc = inter.pred$pred+inter.pred$se
+lc = inter.pred$pred-inter.pred$se
+ic = cbind(lc,uc)
+ic
 ```
 
-```{r}
-#MSE = mean((df2$t_cabezas- fitted.values(modelo_intervenido)))^2
-#MSE
-```
-El MSE de este modelo es del orden de 0.000007387; Hasta el momento, ningún modelo ha ajustado un MSE tan pequeño.
-De esta manera, este modelo con intervenciones; parece el modelo más confiable para realizar predicciones.
+
+
 
 ## Grafica de la predicción
 
@@ -829,11 +965,13 @@ a2 = ts(s2, frequency = 12, start = c(2022,09))
 #Visually evaluate the prediction
 autoplot(a1, series="Datos") + 
    autolayer(a2, series="Predicciones") +
-   #autolayer(HW2.pred, series="Prediction") +
+   autolayer(uc, series="IC inferior") +
+   autolayer(lc, series="IC Superior") +
    xlab("Year") + ylab("Total sacrificios (1/100.000)") + ggtitle("Total de sacrifios 2008-2022") + theme_bw()+theme(legend.title = element_blank(),legend.position = "bottom")
 ```
 
-Finalmente, se tienen las predicciones con su respectivo IC.
+
+
 
 
 
